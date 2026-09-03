@@ -1,16 +1,21 @@
 // Headless Hushpot simulator over @midnight-ntwrk/compact-runtime.
 //
 // Executes the REAL compiled circuits (managed/hushpot/contract/index.js)
-// against an in-memory ledger - no network, no proof server. Each caller
+// against an in-memory state - no network, no proof server. Each caller
 // is modeled by its own private state ({sk, amount}), exactly like distinct
 // wallets would supply distinct witnesses.
-import * as ocrt from '@midnightntwrk/onchain-runtime-v4';
 import * as rt from '@midnight-ntwrk/compact-runtime';
-import { Contract, Witnesses } from '../managed/hushpot/contract/index.js';
+import {
+  Contract,
+  Witnesses,
+  ledger as ledgerView,
+  type Ledger,
+} from '../managed/hushpot/contract/index.js';
 
 export type MemberPS = { sk: Uint8Array; amount: bigint };
 
-export const SEED = '0'.repeat(64);
+/** Dummy zswap coin public key (hex string) for headless runs. */
+const COIN_PUB_KEY = '1f'.repeat(32);
 
 const witnesses: Witnesses<MemberPS> = {
   localSk: (ctx) => [ctx.privateState, ctx.privateState.sk],
@@ -22,94 +27,88 @@ export const member = (byte: number, amount: bigint): MemberPS => ({
   amount,
 });
 
-function stateValue(state: unknown): ocrt.StateValue {
-  const s = state as { state?: unknown; data?: unknown };
-  if (s?.state instanceof ocrt.StateValue) return s.state;
-  if (s?.data instanceof ocrt.StateValue) return s.data;
-  throw new Error('cannot extract StateValue from contract state');
-}
+export const hex = (b: Uint8Array): string => Buffer.from(b).toString('hex');
+
+export type CircuitId =
+  | 'join'
+  | 'pledge'
+  | 'provePledgeAtLeast'
+  | 'closeEntries'
+  | 'claim';
 
 export class HushpotSim {
-  private readonly sc = new Contract<MemberPS, Witnesses<MemberPS>>(witnesses);
-  private readonly address: string;
-  private state: rt.CircuitContext<MemberPS>['queryContexts'][string] extends never ? never : any;
+  private state: rt.ChargedState;
 
-  private constructor(state: unknown, address: string) {
+  private constructor(
+    private readonly sc: Contract<MemberPS, Witnesses<MemberPS>>,
+    private readonly address: rt.ContractAddress,
+    state: rt.ChargedState,
+  ) {
     this.state = state;
-    this.address = address;
   }
 
-  static async deploy(cap: bigint, minimum: bigint, host: MemberPS): Promise<HushpotSim> {
+  static async deploy(
+    cap: bigint,
+    minimum: bigint,
+    host: MemberPS,
+  ): Promise<HushpotSim> {
     const sc = new Contract<MemberPS, Witnesses<MemberPS>>(witnesses);
-    const { currentContractState } = await sc.initialState(
-      rt.createConstructorContext(host, SEED),
+    const res = await sc.initialState(
+      rt.createConstructorContext(host, COIN_PUB_KEY),
       cap,
       minimum,
     );
-    return new HushpotSim(currentContractState, rt.dummyContractAddress());
+    return new HushpotSim(
+      sc,
+      rt.dummyContractAddress(),
+      res.currentContractState.data,
+    );
   }
 
   /** Call a circuit as `actor`; chains the advanced ledger state. */
   async call(
-    circuitId: 'join' | 'pledge' | 'provePledgeAtLeast' | 'closeEntries' | 'claim',
+    circuit: CircuitId,
     actor: MemberPS,
     ...args: unknown[]
   ): Promise<rt.CircuitResults<MemberPS, unknown>> {
-    const ctx = rt.createCircuitContext(circuitId, this.address, SEED, this.state, actor);
-    const circuit = (this.sc.circuits as Record<string, (...a: unknown[]) => Promise<rt.CircuitResults<MemberPS, unknown>>>)[circuitId];
-    const res = await circuit(ctx, ...args);
-    this.state = res.context.queryContexts[this.address].state;
+    const ctx = rt.createCircuitContext(
+      this.address,
+      COIN_PUB_KEY,
+      this.state,
+      actor,
+    );
+    const fn = this.sc.circuits[circuit] as (
+      ...a: unknown[]
+    ) => rt.CircuitResults<MemberPS, unknown>;
+    const res = await fn(ctx, ...args);
+    this.state = res.context.currentQueryContext.state;
     return res;
   }
 
-  /** Raw ledger cells (11 fields, declaration order). */
-  cells(): ocrt.StateValue[] {
-    return stateValue(this.state).asArray() as unknown as ocrt.StateValue[];
+  /** Typed view of the entire public ledger state. */
+  ledger(): Ledger {
+    return ledgerView(this.state);
   }
 
-  /** Decoded scalar cell (numbers, small ints, Bytes<32> as Uint8Array). */
-  cell(i: number): number | bigint | Uint8Array {
-    const c = (this.cells()[i] as unknown as { asCell: () => { value: number | bigint | Uint8Array } }).asCell();
-    return c.value;
+  /** Deterministic encoding of the whole public state (privacy snapshots). */
+  encoded(): string {
+    return this.state.toString();
   }
 
-  /** Cell rendered as hex (for commitment anchors). */
-  cellHex(i: number): string {
-    const v = this.cell(i);
-    return Buffer.from(v as Uint8Array).toString('hex');
+  /** Hex of the Bytes<32> commitment anchors stored in `members`. */
+  memberAnchors(): string[] {
+    return [...this.ledger().members].map(hex);
   }
 
-  /** Size of a Set/Map ledger field. */
-  mapSize(i: number): number {
-    const m = (this.cells()[i] as unknown as { asMap: () => { keys: () => Iterable<unknown> } }).asMap();
-    return [...m.keys()].length;
+  /** Hex pairs (anchor -> commitment) stored in `pledges`. */
+  pledgeAnchors(): [string, string][] {
+    return [...this.ledger().pledges].map(
+      ([k, v]) => [hex(k), hex(v)] as [string, string],
+    );
   }
 
-  /** Keys of a Set/Map ledger field as hex strings (commitment anchors). */
-  mapKeyHexes(i: number): string[] {
-    const m = (this.cells()[i] as unknown as {
-      asMap: () => { keys: () => Iterable<{ asCell: () => { value: Uint8Array } }> };
-    }).asMap();
-    return [...m.keys()].map((k) => Buffer.from(k.asCell().value).toString('hex'));
-  }
-
-  /** Canonical encoding of the whole ledger - proves (non-)mutation. */
-  encoded(): Uint8Array {
-    return stateValue(this.state).encode() as Uint8Array;
+  /** Hex of the claim nullifier anchors stored in `claims`. */
+  claimAnchors(): string[] {
+    return [...this.ledger().claims].map(hex);
   }
 }
-
-// Ledger field indices (declaration order in hushpot.compact).
-export const LEDGER = {
-  host: 0,
-  capacity: 1,
-  minPledge: 2,
-  state: 3,
-  members: 4,
-  pledges: 5,
-  claims: 6,
-  memberCount: 7,
-  pledgeCount: 8,
-  claimCount: 9,
-  claimTotal: 10,
-} as const;

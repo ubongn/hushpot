@@ -17,9 +17,9 @@ const circuitNames = info.circuits.map((c: any) => c.name).sort();
 const ledgerNames = info.ledger.map((l: any) => l.name);
 
 describe('compiled surface', () => {
-  it('compiles with compactc 0.34.0 against runtime 0.19.0', () => {
-    expect(info['compiler-version']).toBe('0.34.0');
-    expect(info['runtime-version']).toBe('0.19.0');
+  it('compiles with compactc 0.31.1 against runtime 0.16.0', () => {
+    expect(info['compiler-version']).toBe('0.31.1');
+    expect(info['runtime-version']).toBe('0.16.0');
   });
 
   it('installed compact-runtime matches the contract runtime version', () => {
@@ -57,14 +57,15 @@ describe('compiled surface', () => {
     const witnessNames = info.witnesses.map((w: any) => w.name).sort();
     expect(witnessNames).toEqual(['localPledgeAmount', 'localSk']);
     const sk = info.witnesses.find((w: any) => w.name === 'localSk');
-    expect(sk['result type'].type).toBe('Bytes');
+    expect(sk['result type']['type-name']).toBe('Bytes');
     expect(sk['result type'].length).toBe(32);
   });
 
   it('provePledgeAtLeast takes only a private threshold parameter', () => {
     const c = info.circuits.find((c: any) => c.name === 'provePledgeAtLeast');
     expect(c.arguments).toHaveLength(1);
-    expect(c.arguments[0]['result type']?.type ?? c.arguments[0].type?.type).toBe('Uint');
+    expect(c.arguments[0].name).toBe('threshold');
+    expect(c.arguments[0].type['type-name']).toBe('Uint');
   });
 
   it('ledger holds exactly the 11 designed fields', () => {
@@ -84,13 +85,18 @@ describe('compiled surface', () => {
   });
 
   it('no ledger field stores an amount before settlement', () => {
-    // The ONLY field whose name contains an amount-ish word is claimTotal
-    // (the deliberate settlement disclosure). Everything else is anchors,
-    // sizes, or rules.
-    const amountish = ledgerNames.filter((n: string) =>
-      /amount|balance|pledge[A-Z]/.test(n),
-    );
-    expect(amountish).toEqual(['claimTotal']);
+    // The only 64-bit numeric fields are minPledge (a published rule) and
+    // claimTotal (the deliberate settlement disclosure). No field name
+    // carries a per-member amount.
+    const u64 = info.ledger
+      .filter(
+        (l: any) =>
+          l.type?.['type-name'] === 'Uint' &&
+          l.type.maxval === 18446744073709552000,
+      )
+      .map((l: any) => l.name);
+    expect(u64).toEqual(['minPledge', 'claimTotal']);
+    expect(ledgerNames.join()).not.toMatch(/amount/i);
   });
 
   it('members/pledges/claims are commitment containers (Bytes<32>)', () => {

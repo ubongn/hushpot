@@ -18,7 +18,7 @@ const cmd = isWindows
       "wsl",
       [
         "-d",
-        "Ubuntu-24.04",
+        "mnc",
         "-u",
         "root",
         "--",

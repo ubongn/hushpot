@@ -6,7 +6,7 @@
 // run in-circuit).
 
 import type { WitnessContext } from '@midnight-ntwrk/midnight-js-protocol/compact-runtime';
-import type { Ledger } from '../../contracts/managed/hushpot/contract/index.js';
+import type { Ledger } from '../../managed/hushpot/contract/index.js';
 
 export type HushpotPrivateState = {
   readonly sk: Uint8Array;

@@ -133,6 +133,7 @@ export circuit provePledgeAtLeast(threshold: Uint<64>): [] {
     const amount = localPledgeAmount();
 
     assert(members.member(anchor), "not a member");
+    assert(pledges.member(anchor), "no such pledge");
     assert(pledges.lookup(anchor) == pledgeCommit(amount, sk), "no such pledge");
     assert(amount >= threshold, "pledge below threshold");
     // [STAYS-IN-CIRCUIT] - deliberately no ledger write
@@ -161,6 +162,7 @@ export circuit claim(): [] {
 
     assert(state == PotState.CLOSED, "pot is not closed yet");
     assert(members.member(anchor), "not a member");
+    assert(pledges.member(anchor), "no such pledge");
     assert(pledges.lookup(anchor) == pledgeCommit(amount, sk), "no such pledge");
     assert(!claims.member(nullifier), "already claimed");
 
