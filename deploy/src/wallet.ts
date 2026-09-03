@@ -12,11 +12,21 @@ import type {
   WalletProvider,
 } from '@midnight-ntwrk/midnight-js-types';
 import { ttlOneHour } from '@midnight-ntwrk/midnight-js-utils';
-import type { WalletFacade, FacadeState, UnshieldedKeystore } from '@midnight-ntwrk/wallet-sdk';
+import {
+  type FacadeState,
+  type UnshieldedKeystore,
+  type WalletFacade,
+  type DefaultConfiguration,
+  InMemoryTransactionHistoryStorage,
+  WalletEntrySchema,
+  createKeystore,
+  mergeWalletEntries,
+} from '@midnight-ntwrk/wallet-sdk';
 import {
   type DustWalletOptions,
   type EnvironmentConfiguration,
-  FluentWalletBuilder,
+  WalletFactory,
+  WalletSeeds,
 } from '@midnight-ntwrk/testkit-js';
 import * as Rx from 'rxjs';
 import type { Logger } from 'pino';
@@ -87,23 +97,56 @@ export class MidnightWalletProvider implements MidnightProvider, WalletProvider 
       feeBlocksMargin: 5,
     };
 
-    const base = FluentWalletBuilder.forEnvironment(env)
-      .withDustOptions(dustOptions);
-    const builder =
-      secret.kind === 'mnemonic'
-        ? base.withMnemonic(secret.value)
-        : base.withSeed(secret.value);
+    // Direct wallet construction mirroring testkit's FluentWalletBuilder.buildWithoutStarting(),
+    // with one critical addition: `batchUpdates`. The SDK default (10 events / 1ms timeout /
+    // 4ms spacing between batches) throttles the dust-ledger indexer scan to ~150 blocks/s,
+    // i.e. ~2.5h to scan preprod from genesis (~1.48M blocks) — which is what killed the
+    // previous deploy sessions. With turbo batching the indexer stream becomes the bottleneck
+    // instead of an artificial sleep. Disable by setting MIDNIGHT_SYNC_TURBO=0.
+    const turbo = process.env['MIDNIGHT_SYNC_TURBO'] !== '0';
+    const config = {
+      indexerClientConnection: {
+        indexerHttpUrl: env.indexer,
+        indexerWsUrl: env.indexerWS,
+        ...(turbo
+          ? { bufferSize: 50_000, resumeThreshold: 1_000 }
+          : {}),
+      },
+      provingServerUrl: new URL(env.proofServer),
+      networkId: env.walletNetworkId,
+      relayURL: new URL(env.nodeWS),
+      txHistoryStorage: new InMemoryTransactionHistoryStorage(
+        WalletEntrySchema,
+        mergeWalletEntries,
+      ),
+      costParameters: { feeBlocksMargin: 5 },
+      ...(turbo ? { batchUpdates: { size: 1_000, timeout: 100, spacing: 0 } } : {}),
+    } as DefaultConfiguration;
 
-    const buildResult = await builder.buildWithoutStarting();
-    const { wallet, seeds, keystore } = buildResult as {
-      wallet: WalletFacade;
-      seeds: {
-        masterSeed: string;
-        shielded: Uint8Array;
-        dust: Uint8Array;
-      };
-      keystore: UnshieldedKeystore;
-    };
+    const seeds =
+      secret.kind === 'mnemonic'
+        ? WalletSeeds.fromMnemonic(secret.value)
+        : WalletSeeds.fromMasterSeed(secret.value);
+    const keystore = createKeystore(seeds.unshielded, env.walletNetworkId);
+    const shieldedWallet = WalletFactory.createShieldedWallet(
+      config,
+      seeds.shielded,
+    );
+    const unshieldedWallet = WalletFactory.createUnshieldedWallet(
+      config,
+      keystore,
+    );
+    const dustWallet = WalletFactory.createDustWallet(
+      config,
+      seeds.dust,
+      dustOptions,
+    );
+    const wallet = await WalletFactory.createWalletFacade(
+      config,
+      shieldedWallet,
+      unshieldedWallet,
+      dustWallet,
+    );
 
     logger.info(
       `Wallet built from ${secret.kind}; master seed: ${seeds.masterSeed.slice(0, 8)}...`,
@@ -156,6 +199,7 @@ export async function syncWallet(
 ): Promise<FacadeState> {
   logger.info('Syncing wallet...');
   let emissionCount = 0;
+  let lastLogged = 0;
   return Rx.firstValueFrom(
     wallet.state().pipe(
       Rx.tap((state: FacadeState) => {
@@ -163,6 +207,11 @@ export async function syncWallet(
         const shielded = isProgressStrictlyComplete(state.shielded.state.progress);
         const unshielded = isProgressStrictlyComplete(state.unshielded.progress);
         const dust = isProgressStrictlyComplete(state.dust.state.progress);
+        // Log at most every 2s (or on completion) — per-emission logging becomes a
+        // bottleneck itself once the turbo batch settings speed the sync up.
+        const now = Date.now();
+        if (now - lastLogged < 2_000 && !(shielded && unshielded && dust)) return;
+        lastLogged = now;
         logger.info(
           `Wallet sync [${emissionCount}]: shielded=${formatProgress(state.shielded.state.progress)}, ` +
             `unshielded=${formatProgress(state.unshielded.progress)}, dust=${formatProgress(state.dust.state.progress)}`,

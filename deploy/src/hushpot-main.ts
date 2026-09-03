@@ -148,7 +148,9 @@ async function main() {
   }
 
   await wallet.start();
-  await syncWallet(logger, wallet.wallet, 60 * 60_000);
+  // Preprod dust-ledger scan from genesis takes >1h even with turbo batch settings,
+  // so allow a generous ceiling (dust ~285 blocks/s observed; ~1.48M blocks).
+  await syncWallet(logger, wallet.wallet, 4 * 60 * 60_000);
 
   const nightBalance = await waitForFunds(
     wallet.wallet,

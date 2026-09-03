@@ -1,0 +1,64 @@
+[15:25:22.716] [32mINFO[39m (9316928): [36mCreating dust wallet with params: {"indexerClientConnection":{"indexerHttpUrl":"https://indexer.preprod.midnight.network/api/v4/graphql","indexerWsUrl":"wss://indexer.preprod.midnight.network/api/v4/graphql/ws","bufferSize":50000,"resumeThreshold":1000},"provingServerUrl":"http://127.0.0.1:6300/","networkId":"preprod","relayURL":"wss://rpc.preprod.midnight.network/","txHistoryStorage":{"storage":{}},"costParameters":{"ledgerParams":{"__wbg_ptr":4654560},"additionalFeeOverhead":"1000","feeBlocksMargin":5},"batchUpdates":{"size":1000,"timeout":100,"spacing":0}}[39m
+[15:25:22.814] [32mINFO[39m (9316928): [36mWallet built from seed; master seed: 2ecd316b...[39m
+[15:25:22.814] [32mINFO[39m (9316928): [36mStarting wallet...[39m
+[15:25:22.853] [32mINFO[39m (9316928): [36mSyncing wallet...[39m
+[15:25:22.866] [32mINFO[39m (9316928): [36mWallet sync [1]: shielded=false (0/0), unshielded=false (0/0), dust=false (0/0)[39m
+[15:25:25.169] [32mINFO[39m (9316928): [36mWallet sync [4]: shielded=false (2677/1480202), unshielded=false (0/0), dust=false (1/1480315)[39m
+[15:25:28.420] [32mINFO[39m (9316928): [36mWallet sync [7]: shielded=false (15517/1480202), unshielded=true (585103/585103), dust=false (1/1480315)[39m
+[15:25:32.546] [32mINFO[39m (9316928): [36mWallet sync [9]: shielded=false (17839/1480202), unshielded=true (585103/585103), dust=false (288/1480315)[39m
+[15:25:34.736] [32mINFO[39m (9316928): [36mWallet sync [11]: shielded=false (18748/1480202), unshielded=true (585103/585103), dust=false (441/1480315)[39m
+[15:25:37.520] [32mINFO[39m (9316928): [36mWallet sync [13]: shielded=false (20084/1480202), unshielded=true (585103/585103), dust=false (598/1480315)[39m
+[15:25:40.516] [32mINFO[39m (9316928): [36mWallet sync [15]: shielded=false (21922/1480202), unshielded=true (585103/585103), dust=false (750/1480315)[39m
+2026-09-03 15:25:43        RPC-CORE: subscribeRuntimeVersion(): RuntimeVersion:: disconnected from wss://rpc.preprod.midnight.network/: 1000:: Normal Closure
+2026-09-03 15:25:43        RPC-CORE: subscribeRuntimeVersion(): RuntimeVersion:: disconnected from wss://rpc.preprod.midnight.network/: 1000:: Normal Closure
+[15:25:42.705] [32mINFO[39m (9316928): [36mWallet sync [17]: shielded=false (22717/1480202), unshielded=true (585103/585103), dust=false (925/1480315)[39m
+[15:25:45.280] [32mINFO[39m (9316928): [36mWallet sync [19]: shielded=false (30910/1480202), unshielded=true (585103/585103), dust=false (1214/1480315)[39m
+[15:25:47.579] [32mINFO[39m (9316928): [36mWallet sync [21]: shielded=false (31478/1480202), unshielded=true (585103/585103), dust=false (1519/1480315)[39m
+[15:25:50.344] [32mINFO[39m (9316928): [36mWallet sync [23]: shielded=false (32153/1480202), unshielded=true (585103/585103), dust=false (1961/1480315)[39m
+[15:25:52.647] [32mINFO[39m (9316928): [36mWallet sync [24]: shielded=false (32153/1480202), unshielded=true (585103/585103), dust=false (3168/1480315)[39m
+[15:25:55.706] [32mINFO[39m (9316928): [36mWallet sync [26]: shielded=false (37911/1480202), unshielded=true (585103/585103), dust=false (4595/1480315)[39m
+[15:25:57.969] [32mINFO[39m (9316928): [36mWallet sync [28]: shielded=false (37911/1480202), unshielded=true (585103/585103), dust=false (5595/1480315)[39m
+[15:26:01.185] [32mINFO[39m (9316928): [36mWallet sync [30]: shielded=false (73940/1480202), unshielded=true (585103/585103), dust=false (6398/1480315)[39m
+[15:26:03.719] [32mINFO[39m (9316928): [36mWallet sync [31]: shielded=false (116486/1480202), unshielded=true (585103/585103), dust=false (6398/1480315)[39m
+[15:26:07.758] [32mINFO[39m (9316928): [36mWallet sync [33]: shielded=false (143191/1480202), unshielded=true (585103/585103), dust=false (7140/1480316)[39m
+[15:26:11.567] [32mINFO[39m (9316928): [36mWallet sync [35]: shielded=false (245526/1480202), unshielded=true (585103/585103), dust=false (7692/1480316)[39m
+[15:26:15.653] [32mINFO[39m (9316928): [36mWallet sync [37]: shielded=false (347207/1480202), unshielded=true (585103/585103), dust=false (8194/1480316)[39m
+[15:26:18.456] [32mINFO[39m (9316928): [36mWallet sync [39]: shielded=false (354690/1480202), unshielded=true (585103/585103), dust=false (8817/1480316)[39m
+[15:26:20.804] [32mINFO[39m (9316928): [36mWallet sync [41]: shielded=false (421490/1480202), unshielded=true (585103/585103), dust=false (9378/1480316)[39m
+[15:26:22.893] [32mINFO[39m (9316928): [36mWallet sync [43]: shielded=false (469215/1480202), unshielded=true (585103/585103), dust=false (9853/1480316)[39m
+[15:26:25.549] [32mINFO[39m (9316928): [36mWallet sync [45]: shielded=false (478121/1480202), unshielded=true (585103/585103), dust=false (10398/1480316)[39m
+[15:26:28.690] [32mINFO[39m (9316928): [36mWallet sync [48]: shielded=false (574419/1480202), unshielded=true (585103/585103), dust=false (11001/1480316)[39m
+[15:26:31.162] [32mINFO[39m (9316928): [36mWallet sync [50]: shielded=false (923718/1480202), unshielded=true (585103/585103), dust=false (11519/1480316)[39m
+[15:26:33.913] [32mINFO[39m (9316928): [36mWallet sync [52]: shielded=false (994865/1480202), unshielded=true (585103/585103), dust=false (12314/1480316)[39m
+[15:26:36.365] [32mINFO[39m (9316928): [36mWallet sync [54]: shielded=false (1005296/1480202), unshielded=true (585103/585103), dust=false (12875/1480316)[39m
+[15:26:38.588] [32mINFO[39m (9316928): [36mWallet sync [56]: shielded=false (1011108/1480202), unshielded=true (585103/585103), dust=false (13438/1480316)[39m
+[15:26:40.818] [32mINFO[39m (9316928): [36mWallet sync [57]: shielded=false (1011108/1480202), unshielded=true (585103/585103), dust=false (14439/1480316)[39m
+[15:26:43.622] [32mINFO[39m (9316928): [36mWallet sync [59]: shielded=false (1016234/1480202), unshielded=true (585103/585103), dust=false (15803/1480316)[39m
+[15:26:46.792] [32mINFO[39m (9316928): [36mWallet sync [61]: shielded=false (1016234/1480202), unshielded=true (585103/585103), dust=false (19137/1480316)[39m
+[15:26:49.057] [32mINFO[39m (9316928): [36mWallet sync [62]: shielded=false (1071987/1480202), unshielded=true (585103/585103), dust=false (19137/1480316)[39m
+[15:26:52.219] [32mINFO[39m (9316928): [36mWallet sync [64]: shielded=false (1071987/1480202), unshielded=true (585103/585103), dust=false (22232/1480316)[39m
+[15:26:55.646] [32mINFO[39m (9316928): [36mWallet sync [66]: shielded=false (1071987/1480202), unshielded=true (585103/585103), dust=false (24524/1480316)[39m
+[15:26:59.386] [32mINFO[39m (9316928): [36mWallet sync [68]: shielded=false (1138904/1480202), unshielded=true (585103/585103), dust=false (25524/1480316)[39m
+[15:27:01.759] [32mINFO[39m (9316928): [36mWallet sync [69]: shielded=false (1166437/1480202), unshielded=true (585103/585103), dust=false (25524/1480316)[39m
+[15:27:05.190] [32mINFO[39m (9316928): [36mWallet sync [71]: shielded=false (1166437/1480202), unshielded=true (585103/585103), dust=false (27747/1480316)[39m
+[15:27:08.210] [32mINFO[39m (9316928): [36mWallet sync [73]: shielded=false (1181470/1480202), unshielded=true (585103/585103), dust=false (28764/1480316)[39m
+[15:27:10.995] [32mINFO[39m (9316928): [36mWallet sync [76]: shielded=false (1198938/1480202), unshielded=true (585103/585103), dust=false (29625/1480316)[39m
+[15:27:13.652] [32mINFO[39m (9316928): [36mWallet sync [78]: shielded=false (1208385/1480202), unshielded=true (585103/585103), dust=false (30571/1480316)[39m
+[15:27:16.481] [32mINFO[39m (9316928): [36mWallet sync [80]: shielded=false (1217666/1480202), unshielded=true (585103/585103), dust=false (32539/1480316)[39m
+[15:27:19.277] [32mINFO[39m (9316928): [36mWallet sync [82]: shielded=false (1229442/1480202), unshielded=true (585103/585103), dust=false (33567/1480317)[39m
+[15:27:22.141] [32mINFO[39m (9316928): [36mWallet sync [84]: shielded=false (1242569/1480202), unshielded=true (585103/585103), dust=false (34509/1480317)[39m
+[15:27:26.212] [32mINFO[39m (9316928): [36mWallet sync [87]: shielded=false (1258276/1480202), unshielded=true (585103/585103), dust=false (35313/1480317)[39m
+[15:27:29.508] [32mINFO[39m (9316928): [36mWallet sync [89]: shielded=false (1266662/1480202), unshielded=true (585103/585103), dust=false (36174/1480317)[39m
+[15:27:32.833] [32mINFO[39m (9316928): [36mWallet sync [91]: shielded=false (1272403/1480202), unshielded=true (585103/585103), dust=false (37056/1480317)[39m
+[15:27:36.183] [32mINFO[39m (9316928): [36mWallet sync [93]: shielded=false (1275567/1480202), unshielded=true (585103/585103), dust=false (38018/1480317)[39m
+[15:27:39.402] [32mINFO[39m (9316928): [36mWallet sync [95]: shielded=false (1277489/1480202), unshielded=true (585103/585103), dust=false (38927/1480317)[39m
+[15:27:43.775] [32mINFO[39m (9316928): [36mWallet sync [97]: shielded=false (1282053/1480202), unshielded=true (585103/585103), dust=false (39791/1480317)[39m
+[15:27:47.294] [32mINFO[39m (9316928): [36mWallet sync [99]: shielded=false (1296132/1480202), unshielded=true (585103/585103), dust=false (40751/1480317)[39m
+[15:27:50.298] [32mINFO[39m (9316928): [36mWallet sync [101]: shielded=false (1296132/1480202), unshielded=true (585103/585103), dust=false (42753/1480317)[39m
+[15:27:53.781] [32mINFO[39m (9316928): [36mWallet sync [103]: shielded=false (1296132/1480202), unshielded=true (585103/585103), dust=false (44869/1480317)[39m
+[15:27:57.081] [32mINFO[39m (9316928): [36mWallet sync [106]: shielded=false (1310029/1480202), unshielded=true (585103/585103), dust=false (45928/1480317)[39m
+[15:28:02.201] [32mINFO[39m (9316928): [36mWallet sync [108]: shielded=false (1338877/1480202), unshielded=true (585103/585103), dust=false (46928/1480317)[39m
+[15:28:04.929] [32mINFO[39m (9316928): [36mWallet sync [110]: shielded=false (1338877/1480202), unshielded=true (585103/585103), dust=false (48876/1480317)[39m
+[15:28:08.076] [32mINFO[39m (9316928): [36mWallet sync [112]: shielded=false (1338877/1480202), unshielded=true (585103/585103), dust=false (50877/1480317)[39m
+[15:28:11.051] [32mINFO[39m (9316928): [36mWallet sync [114]: shielded=false (1338877/1480202), unshielded=true (585103/585103), dust=false (52892/1480317)[39m
+[15:28:14.262] [32mINFO[39m (9316928): [36mWallet sync [115]: shielded=false (1365857/1480202), unshielded=true (585103/585103), dust=false (52892/1480317)[39m
