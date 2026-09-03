@@ -8,3 +8,4 @@ deploy/.env.*
 !deploy/.env.preprod.example
 deploy/contract/managed/
 *.log
+deploy/logs/  
