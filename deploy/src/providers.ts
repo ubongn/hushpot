@@ -10,17 +10,18 @@ export type SealedVaultCircuits = 'sealNote' | 'openRevealing' | 'revealNote';
 
 export type SealedVaultProviders = MidnightProviders<any>;
 
-export function buildProviders(
+export function buildProviders<C extends string = SealedVaultCircuits>(
     wallet: MidnightWalletProvider,
     zkConfigPath: string,
     config: NetworkConfig,
-): SealedVaultProviders {
-    const zkConfigProvider = new NodeZkConfigProvider<SealedVaultCircuits>(zkConfigPath);
+    privateStateStoreName = `midnight-private-state-${Date.now()}`,
+): MidnightProviders<any> {
+    const zkConfigProvider = new NodeZkConfigProvider<C>(zkConfigPath);
 
     return {
         privateStateProvider: levelPrivateStateProvider({
-            privateStateStoreName: `sealed-vault-${Date.now()}`,
-            privateStoragePasswordProvider: () => 'sealed-vault-test-password',
+            privateStateStoreName,
+            privateStoragePasswordProvider: () => 'midnight-deploy-password',
             accountId: wallet.getCoinPublicKey(),
         }),
         publicDataProvider: indexerPublicDataProvider(

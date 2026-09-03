@@ -1,5 +1,5 @@
 import * as __compactRuntime from '@midnight-ntwrk/compact-runtime';
-__compactRuntime.checkRuntimeVersion('0.19.0');
+__compactRuntime.checkRuntimeVersion('0.16.0');
 
 export var PotState;
 (function (PotState) {
@@ -57,8 +57,6 @@ class _ContractAddress_0 {
 
 const _descriptor_9 = new _ContractAddress_0();
 
-const _descriptor_10 = new __compactRuntime.CompactTypeUnsignedInteger(4294967295n, 4);
-
 export class Contract {
   witnesses;
   constructor(...args_0) {
@@ -77,61 +75,59 @@ export class Contract {
     }
     this.witnesses = witnesses_0;
     this.circuits = {
-      join: async (...args_1) => {
+      join: (...args_1) => {
         if (args_1.length !== 1) {
           throw new __compactRuntime.CompactError(`join: expected 1 argument (as invoked from Typescript), received ${args_1.length}`);
         }
         const contextOrig_0 = args_1[0];
-        if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.callContext.currentQueryContext != undefined)) {
+        if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('join',
                                      'argument 1 (as invoked from Typescript)',
                                      'hushpot.compact line 94 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
-        const context = __compactRuntime.copyCircuitContext(contextOrig_0);
+        const context = { ...contextOrig_0, gasCost: __compactRuntime.emptyRunningCost() };
         const partialProofData = {
           input: { value: [], alignment: [] },
           output: undefined,
           publicTranscript: [],
           privateTranscriptOutputs: []
         };
-        const result_0 = await this._join_0(context, partialProofData);
+        const result_0 = this._join_0(context, partialProofData);
         partialProofData.output = { value: [], alignment: [] };
-        __compactRuntime.finalizeCallProofData(context, partialProofData);
-        return { result: result_0, context: context, gasCost: context.callContext.currentGasCost };
+        return { result: result_0, context: context, proofData: partialProofData, gasCost: context.gasCost };
       },
-      pledge: async (...args_1) => {
+      pledge: (...args_1) => {
         if (args_1.length !== 1) {
           throw new __compactRuntime.CompactError(`pledge: expected 1 argument (as invoked from Typescript), received ${args_1.length}`);
         }
         const contextOrig_0 = args_1[0];
-        if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.callContext.currentQueryContext != undefined)) {
+        if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('pledge',
                                      'argument 1 (as invoked from Typescript)',
                                      'hushpot.compact line 110 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
-        const context = __compactRuntime.copyCircuitContext(contextOrig_0);
+        const context = { ...contextOrig_0, gasCost: __compactRuntime.emptyRunningCost() };
         const partialProofData = {
           input: { value: [], alignment: [] },
           output: undefined,
           publicTranscript: [],
           privateTranscriptOutputs: []
         };
-        const result_0 = await this._pledge_0(context, partialProofData);
+        const result_0 = this._pledge_0(context, partialProofData);
         partialProofData.output = { value: [], alignment: [] };
-        __compactRuntime.finalizeCallProofData(context, partialProofData);
-        return { result: result_0, context: context, gasCost: context.callContext.currentGasCost };
+        return { result: result_0, context: context, proofData: partialProofData, gasCost: context.gasCost };
       },
-      provePledgeAtLeast: async (...args_1) => {
+      provePledgeAtLeast: (...args_1) => {
         if (args_1.length !== 2) {
           throw new __compactRuntime.CompactError(`provePledgeAtLeast: expected 2 arguments (as invoked from Typescript), received ${args_1.length}`);
         }
         const contextOrig_0 = args_1[0];
         const threshold_0 = args_1[1];
-        if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.callContext.currentQueryContext != undefined)) {
+        if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('provePledgeAtLeast',
                                      'argument 1 (as invoked from Typescript)',
                                      'hushpot.compact line 130 char 1',
@@ -145,7 +141,7 @@ export class Contract {
                                      'Uint<0..18446744073709551616>',
                                      threshold_0)
         }
-        const context = __compactRuntime.copyCircuitContext(contextOrig_0);
+        const context = { ...contextOrig_0, gasCost: __compactRuntime.emptyRunningCost() };
         const partialProofData = {
           input: {
             value: _descriptor_0.toValue(threshold_0),
@@ -155,60 +151,57 @@ export class Contract {
           publicTranscript: [],
           privateTranscriptOutputs: []
         };
-        const result_0 = await this._provePledgeAtLeast_0(context,
-                                                          partialProofData,
-                                                          threshold_0);
+        const result_0 = this._provePledgeAtLeast_0(context,
+                                                    partialProofData,
+                                                    threshold_0);
         partialProofData.output = { value: [], alignment: [] };
-        __compactRuntime.finalizeCallProofData(context, partialProofData);
-        return { result: result_0, context: context, gasCost: context.callContext.currentGasCost };
+        return { result: result_0, context: context, proofData: partialProofData, gasCost: context.gasCost };
       },
-      closeEntries: async (...args_1) => {
+      closeEntries: (...args_1) => {
         if (args_1.length !== 1) {
           throw new __compactRuntime.CompactError(`closeEntries: expected 1 argument (as invoked from Typescript), received ${args_1.length}`);
         }
         const contextOrig_0 = args_1[0];
-        if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.callContext.currentQueryContext != undefined)) {
+        if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('closeEntries',
                                      'argument 1 (as invoked from Typescript)',
                                      'hushpot.compact line 144 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
-        const context = __compactRuntime.copyCircuitContext(contextOrig_0);
+        const context = { ...contextOrig_0, gasCost: __compactRuntime.emptyRunningCost() };
         const partialProofData = {
           input: { value: [], alignment: [] },
           output: undefined,
           publicTranscript: [],
           privateTranscriptOutputs: []
         };
-        const result_0 = await this._closeEntries_0(context, partialProofData);
+        const result_0 = this._closeEntries_0(context, partialProofData);
         partialProofData.output = { value: [], alignment: [] };
-        __compactRuntime.finalizeCallProofData(context, partialProofData);
-        return { result: result_0, context: context, gasCost: context.callContext.currentGasCost };
+        return { result: result_0, context: context, proofData: partialProofData, gasCost: context.gasCost };
       },
-      claim: async (...args_1) => {
+      claim: (...args_1) => {
         if (args_1.length !== 1) {
           throw new __compactRuntime.CompactError(`claim: expected 1 argument (as invoked from Typescript), received ${args_1.length}`);
         }
         const contextOrig_0 = args_1[0];
-        if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.callContext.currentQueryContext != undefined)) {
+        if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('claim',
                                      'argument 1 (as invoked from Typescript)',
                                      'hushpot.compact line 156 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
-        const context = __compactRuntime.copyCircuitContext(contextOrig_0);
+        const context = { ...contextOrig_0, gasCost: __compactRuntime.emptyRunningCost() };
         const partialProofData = {
           input: { value: [], alignment: [] },
           output: undefined,
           publicTranscript: [],
           privateTranscriptOutputs: []
         };
-        const result_0 = await this._claim_0(context, partialProofData);
+        const result_0 = this._claim_0(context, partialProofData);
         partialProofData.output = { value: [], alignment: [] };
-        __compactRuntime.finalizeCallProofData(context, partialProofData);
-        return { result: result_0, context: context, gasCost: context.callContext.currentGasCost };
+        return { result: result_0, context: context, proofData: partialProofData, gasCost: context.gasCost };
       }
     };
     this.impureCircuits = {
@@ -226,7 +219,7 @@ export class Contract {
       claim: this.circuits.claim
     };
   }
-  async initialState(...args_0) {
+  initialState(...args_0) {
     if (args_0.length !== 3) {
       throw new __compactRuntime.CompactError(`Contract state constructor: expected 3 arguments (as invoked from Typescript), received ${args_0.length}`);
     }
@@ -278,7 +271,7 @@ export class Contract {
     state_0.setOperation('provePledgeAtLeast', new __compactRuntime.ContractOperation());
     state_0.setOperation('closeEntries', new __compactRuntime.ContractOperation());
     state_0.setOperation('claim', new __compactRuntime.ContractOperation());
-    const context = __compactRuntime.createCircuitContext('constructor', __compactRuntime.dummyContractAddress(), constructorContext_0.initialZswapLocalState.coinPublicKey, state_0.data, constructorContext_0.initialPrivateState);
+    const context = __compactRuntime.createCircuitContext(__compactRuntime.dummyContractAddress(), constructorContext_0.initialZswapLocalState.coinPublicKey, state_0.data, constructorContext_0.initialPrivateState);
     const partialProofData = {
       input: { value: [], alignment: [] },
       output: undefined,
@@ -442,11 +435,11 @@ export class Contract {
                                                  value: __compactRuntime.StateValue.newCell({ value: _descriptor_2.toValue(0),
                                                                                               alignment: _descriptor_2.alignment() }).encode() } },
                                        { ins: { cached: false, n: 1 } }]);
-    state_0.data = new __compactRuntime.ChargedState(context.callContext.currentQueryContext.state.state);
+    state_0.data = new __compactRuntime.ChargedState(context.currentQueryContext.state.state);
     return {
       currentContractState: state_0,
-      currentPrivateState: context.callContext.currentPrivateState,
-      currentZswapLocalState: context.callContext.currentZswapLocalState
+      currentPrivateState: context.currentPrivateState,
+      currentZswapLocalState: context.currentZswapLocalState
     }
   }
   _persistentHash_0(value_0) {
@@ -460,9 +453,9 @@ export class Contract {
     return result_0;
   }
   _localSk_0(context, partialProofData) {
-    const witnessContext_0 = __compactRuntime.createWitnessContext(ledger(context.callContext.currentQueryContext.state), context.callContext.currentPrivateState, context.callContext.currentQueryContext.address);
+    const witnessContext_0 = __compactRuntime.createWitnessContext(ledger(context.currentQueryContext.state), context.currentPrivateState, context.currentQueryContext.address);
     const [nextPrivateState_0, result_0] = this.witnesses.localSk(witnessContext_0);
-    context.callContext.currentPrivateState = nextPrivateState_0;
+    context.currentPrivateState = nextPrivateState_0;
     if (!(result_0.buffer instanceof ArrayBuffer && result_0.BYTES_PER_ELEMENT === 1 && result_0.length === 32)) {
       __compactRuntime.typeError('localSk',
                                  'return value',
@@ -477,9 +470,9 @@ export class Contract {
     return result_0;
   }
   _localPledgeAmount_0(context, partialProofData) {
-    const witnessContext_0 = __compactRuntime.createWitnessContext(ledger(context.callContext.currentQueryContext.state), context.callContext.currentPrivateState, context.callContext.currentQueryContext.address);
+    const witnessContext_0 = __compactRuntime.createWitnessContext(ledger(context.currentQueryContext.state), context.currentPrivateState, context.currentQueryContext.address);
     const [nextPrivateState_0, result_0] = this.witnesses.localPledgeAmount(witnessContext_0);
-    context.callContext.currentPrivateState = nextPrivateState_0;
+    context.currentPrivateState = nextPrivateState_0;
     if (!(typeof(result_0) === 'bigint' && result_0 >= 0n && result_0 <= 18446744073709551615n)) {
       __compactRuntime.typeError('localPledgeAmount',
                                  'return value',
@@ -493,7 +486,7 @@ export class Contract {
     });
     return result_0;
   }
-  async _join_0(context, partialProofData) {
+  _join_0(context, partialProofData) {
     const sk_0 = this._localSk_0(context, partialProofData);
     const anchor_0 = this._memberAnchor_0(sk_0);
     __compactRuntime.assert(_descriptor_2.fromValue(__compactRuntime.queryLedgerState(context,
@@ -603,7 +596,7 @@ export class Contract {
                                        { ins: { cached: false, n: 1 } }]);
     return [];
   }
-  async _pledge_0(context, partialProofData) {
+  _pledge_0(context, partialProofData) {
     const sk_0 = this._localSk_0(context, partialProofData);
     const anchor_0 = this._memberAnchor_0(sk_0);
     const amount_0 = this._localPledgeAmount_0(context, partialProofData);
@@ -707,7 +700,7 @@ export class Contract {
                                        { ins: { cached: true, n: 1 } }]);
     return [];
   }
-  async _provePledgeAtLeast_0(context, partialProofData, threshold_0) {
+  _provePledgeAtLeast_0(context, partialProofData, threshold_0) {
     const sk_0 = this._localSk_0(context, partialProofData);
     const anchor_0 = this._memberAnchor_0(sk_0);
     const amount_0 = this._localPledgeAmount_0(context, partialProofData);
@@ -751,7 +744,7 @@ export class Contract {
     __compactRuntime.assert(amount_0 >= threshold_0, 'pledge below threshold');
     return [];
   }
-  async _closeEntries_0(context, partialProofData) {
+  _closeEntries_0(context, partialProofData) {
     const sk_0 = this._localSk_0(context, partialProofData);
     __compactRuntime.assert(this._equal_1(this._dappKey_0(sk_0),
                                           _descriptor_1.fromValue(__compactRuntime.queryLedgerState(context,
@@ -794,7 +787,7 @@ export class Contract {
                                        { ins: { cached: false, n: 1 } }]);
     return [];
   }
-  async _claim_0(context, partialProofData) {
+  _claim_0(context, partialProofData) {
     const sk_0 = this._localSk_0(context, partialProofData);
     const anchor_0 = this._memberAnchor_0(sk_0);
     const amount_0 = this._localPledgeAmount_0(context, partialProofData);
@@ -940,9 +933,9 @@ export class Contract {
                                     sk_0);
   }
   _pledgeCommit_0(amount_0, sk_0) {
-    return this._persistentHash_0([__compactRuntime.convertBigintToBytes(32,
-                                                                         amount_0,
-                                                                         'hushpot.compact line 190 char 59'),
+    return this._persistentHash_0([__compactRuntime.convertFieldToBytes(32,
+                                                                        amount_0,
+                                                                        'hushpot.compact line 190 char 59'),
                                    sk_0]);
   }
   _claimNullifier_0(sk_0) {
@@ -966,7 +959,7 @@ export function ledger(stateOrChargedState) {
   const state = stateOrChargedState instanceof __compactRuntime.StateValue ? stateOrChargedState : stateOrChargedState.state;
   const chargedState = stateOrChargedState instanceof __compactRuntime.StateValue ? new __compactRuntime.ChargedState(stateOrChargedState) : stateOrChargedState;
   const context = {
-    callContext: { currentQueryContext: new __compactRuntime.QueryContext(chargedState, __compactRuntime.dummyContractAddress()), currentGasCost: __compactRuntime.emptyRunningCost() },
+    currentQueryContext: new __compactRuntime.QueryContext(chargedState, __compactRuntime.dummyContractAddress()),
     costModel: __compactRuntime.CostModel.initialCostModel()
   };
   const partialProofData = {
@@ -1356,7 +1349,7 @@ export function ledger(stateOrChargedState) {
   };
 }
 const _emptyContext = {
-  callContext: { currentQueryContext: new __compactRuntime.QueryContext(new __compactRuntime.ContractState().data, __compactRuntime.dummyContractAddress()), currentGasCost: __compactRuntime.emptyRunningCost() }
+  currentQueryContext: new __compactRuntime.QueryContext(new __compactRuntime.ContractState().data, __compactRuntime.dummyContractAddress())
 };
 const _dummyContract = new Contract({
   localSk: (...args) => undefined, localPledgeAmount: (...args) => undefined
@@ -1364,12 +1357,4 @@ const _dummyContract = new Contract({
 export const pureCircuits = {};
 export const contractReferenceLocations =
   { tag: 'publicLedgerArray', indices: { } };
-export const expectedVk = {
-  'claim': 'bfd8575f6b54feb1ab863a0b439dfb66509d8097a84e0a5fdd532ff9f09e2aa1',
-  'closeEntries': '34c6a1ca2484252447775e2328bd5b91bb2025c0115b649d3e390b6d3eb19bf1',
-  'join': 'a0d62d5cc7427dd29a59c95f19bb6fbb012582f8e40a12012bd72be86005d31d',
-  'pledge': 'ef4c31fff6db201834944f889c801bbbfaa03019f366e6a775551e7f6a7cb29a',
-  'provePledgeAtLeast': '49b651e313d491c4a3fdef17d32c68f816b7cca16da15244b1423a9567e1b2b0',
-};
-
 //# sourceMappingURL=index.js.map

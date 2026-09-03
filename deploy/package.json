@@ -6,7 +6,11 @@
   "engines": { "node": ">=22.0.0" },
   "scripts": {
     "address": "tsx src/main.ts address",
-    "run": "tsx src/main.ts run"
+    "run": "tsx src/main.ts run",
+    "hushpot:address": "tsx src/hushpot-main.ts address",
+    "hushpot:deploy": "tsx src/hushpot-main.ts deploy",
+    "hushpot:demo": "tsx src/hushpot-main.ts demo",
+    "hushpot:lifecycle": "tsx src/hushpot-main.ts lifecycle"
   },
   "dependencies": {
     "@midnight-ntwrk/midnight-js-protocol": "4.1.1",
