@@ -1,0 +1,15 @@
+import { Buffer } from 'buffer';
+import { WebSocket } from 'ws';
+globalThis.WebSocket = WebSocket;
+import { HDWallet, Roles, createKeystore } from '@midnight-ntwrk/wallet-sdk';
+import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
+import * as fs from 'node:fs';
+const state = JSON.parse(fs.readFileSync('.midnight-state.json','utf8'));
+const seed = state.wallets.preview.seed;
+setNetworkId('preview');
+const hdw = HDWallet.fromSeed(Buffer.from(seed,'hex'));
+if (hdw.type !== 'seedOk') throw new Error('bad seed');
+const result = hdw.hdWallet.selectAccount(0).selectRoles([Roles.NightExternal]).deriveKeysAt(0);
+if (result.type !== 'keysDerived') throw new Error('derive failed: ' + result.type);
+const ks = createKeystore(result.keys[Roles.NightExternal], 'preview');
+console.log('PREVIEW_UNSHIELDED_ADDRESS=' + ks.getBech32Address());
