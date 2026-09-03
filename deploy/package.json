@@ -1,9 +1,10 @@
 {
-  "name": "sealed-vault-deploy",
+  "name": "hushpot-deploy-runner",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "engines": { "node": ">=22.0.0" },
+  "_comment": "Scripts-only manifest. ALL runtime dependencies live in the ROOT package.json (single canonical tree). Never `npm install` in this directory - that recreates the duplicate-tree class-split bug that broke deploy attempt 3.",
   "scripts": {
     "address": "tsx src/main.ts address",
     "run": "tsx src/main.ts run",
@@ -11,31 +12,5 @@
     "hushpot:deploy": "tsx src/hushpot-main.ts deploy",
     "hushpot:demo": "tsx src/hushpot-main.ts demo",
     "hushpot:lifecycle": "tsx src/hushpot-main.ts lifecycle"
-  },
-  "dependencies": {
-    "@midnight-ntwrk/midnight-js-protocol": "4.1.1",
-    "@midnight-ntwrk/midnight-js-http-client-proof-provider": "4.1.1",
-    "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "4.1.1",
-    "@midnight-ntwrk/midnight-js-level-private-state-provider": "4.1.1",
-    "@midnight-ntwrk/midnight-js-node-zk-config-provider": "4.1.1",
-    "@midnight-ntwrk/midnight-js-contracts": "4.1.1",
-    "@midnight-ntwrk/midnight-js-network-id": "4.1.1",
-    "@midnight-ntwrk/midnight-js-types": "4.1.1",
-    "@midnight-ntwrk/midnight-js-utils": "4.1.1",
-    "@midnight-ntwrk/testkit-js": "4.1.1",
-    "@midnight-ntwrk/wallet-sdk": "1.2.0",
-    "pino": "^9.0.0",
-    "pino-pretty": "^13.0.0",
-    "rxjs": "^7.8.2",
-    "ws": "^8.14.2"
-  },
-  "devDependencies": {
-    "@types/node": "^22.0.0",
-    "@types/ws": "^8.5.9",
-    "tsx": "^4.19.0",
-    "typescript": "^5.7.0"
-  },
-  "resolutions": {
-    "@midnight-ntwrk/wallet-sdk": "1.2.0"
   }
 }
