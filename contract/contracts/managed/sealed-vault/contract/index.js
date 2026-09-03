@@ -1,5 +1,5 @@
 import * as __compactRuntime from '@midnight-ntwrk/compact-runtime';
-__compactRuntime.checkRuntimeVersion('0.19.0');
+__compactRuntime.checkRuntimeVersion('0.16.0');
 
 export var VaultState;
 (function (VaultState) {
@@ -57,8 +57,6 @@ class _ContractAddress_0 {
 
 const _descriptor_9 = new _ContractAddress_0();
 
-const _descriptor_10 = new __compactRuntime.CompactTypeUnsignedInteger(4294967295n, 4);
-
 export class Contract {
   witnesses;
   constructor(...args_0) {
@@ -77,77 +75,74 @@ export class Contract {
     }
     this.witnesses = witnesses_0;
     this.circuits = {
-      sealNote: async (...args_1) => {
+      sealNote: (...args_1) => {
         if (args_1.length !== 1) {
           throw new __compactRuntime.CompactError(`sealNote: expected 1 argument (as invoked from Typescript), received ${args_1.length}`);
         }
         const contextOrig_0 = args_1[0];
-        if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.callContext.currentQueryContext != undefined)) {
+        if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('sealNote',
                                      'argument 1 (as invoked from Typescript)',
                                      'sealed-vault.compact line 36 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
-        const context = __compactRuntime.copyCircuitContext(contextOrig_0);
+        const context = { ...contextOrig_0, gasCost: __compactRuntime.emptyRunningCost() };
         const partialProofData = {
           input: { value: [], alignment: [] },
           output: undefined,
           publicTranscript: [],
           privateTranscriptOutputs: []
         };
-        const result_0 = await this._sealNote_0(context, partialProofData);
+        const result_0 = this._sealNote_0(context, partialProofData);
         partialProofData.output = { value: [], alignment: [] };
-        __compactRuntime.finalizeCallProofData(context, partialProofData);
-        return { result: result_0, context: context, gasCost: context.callContext.currentGasCost };
+        return { result: result_0, context: context, proofData: partialProofData, gasCost: context.gasCost };
       },
-      openRevealing: async (...args_1) => {
+      openRevealing: (...args_1) => {
         if (args_1.length !== 1) {
           throw new __compactRuntime.CompactError(`openRevealing: expected 1 argument (as invoked from Typescript), received ${args_1.length}`);
         }
         const contextOrig_0 = args_1[0];
-        if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.callContext.currentQueryContext != undefined)) {
+        if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('openRevealing',
                                      'argument 1 (as invoked from Typescript)',
                                      'sealed-vault.compact line 50 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
-        const context = __compactRuntime.copyCircuitContext(contextOrig_0);
+        const context = { ...contextOrig_0, gasCost: __compactRuntime.emptyRunningCost() };
         const partialProofData = {
           input: { value: [], alignment: [] },
           output: undefined,
           publicTranscript: [],
           privateTranscriptOutputs: []
         };
-        const result_0 = await this._openRevealing_0(context, partialProofData);
+        const result_0 = this._openRevealing_0(context, partialProofData);
         partialProofData.output = { value: [], alignment: [] };
-        __compactRuntime.finalizeCallProofData(context, partialProofData);
-        return { result: result_0, context: context, gasCost: context.callContext.currentGasCost };
+        return { result: result_0, context: context, proofData: partialProofData, gasCost: context.gasCost };
       },
-      revealNote: async (...args_1) => {
+      revealNote: (...args_1) => {
         if (args_1.length !== 1) {
           throw new __compactRuntime.CompactError(`revealNote: expected 1 argument (as invoked from Typescript), received ${args_1.length}`);
         }
         const contextOrig_0 = args_1[0];
-        if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.callContext.currentQueryContext != undefined)) {
+        if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('revealNote',
                                      'argument 1 (as invoked from Typescript)',
                                      'sealed-vault.compact line 56 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
-        const context = __compactRuntime.copyCircuitContext(contextOrig_0);
+        const context = { ...contextOrig_0, gasCost: __compactRuntime.emptyRunningCost() };
         const partialProofData = {
           input: { value: [], alignment: [] },
           output: undefined,
           publicTranscript: [],
           privateTranscriptOutputs: []
         };
-        const result_0 = await this._revealNote_0(context, partialProofData);
+        const result_0 = this._revealNote_0(context, partialProofData);
         partialProofData.output = { value: [], alignment: [] };
-        __compactRuntime.finalizeCallProofData(context, partialProofData);
-        return { result: result_0, context: context, gasCost: context.callContext.currentGasCost };
+        return { result: result_0, context: context, proofData: partialProofData, gasCost: context.gasCost };
       }
     };
     this.impureCircuits = {
@@ -161,7 +156,7 @@ export class Contract {
       revealNote: this.circuits.revealNote
     };
   }
-  async initialState(...args_0) {
+  initialState(...args_0) {
     if (args_0.length !== 1) {
       throw new __compactRuntime.CompactError(`Contract state constructor: expected 1 argument (as invoked from Typescript), received ${args_0.length}`);
     }
@@ -190,7 +185,7 @@ export class Contract {
     state_0.setOperation('sealNote', new __compactRuntime.ContractOperation());
     state_0.setOperation('openRevealing', new __compactRuntime.ContractOperation());
     state_0.setOperation('revealNote', new __compactRuntime.ContractOperation());
-    const context = __compactRuntime.createCircuitContext('constructor', __compactRuntime.dummyContractAddress(), constructorContext_0.initialZswapLocalState.coinPublicKey, state_0.data, constructorContext_0.initialPrivateState);
+    const context = __compactRuntime.createCircuitContext(__compactRuntime.dummyContractAddress(), constructorContext_0.initialZswapLocalState.coinPublicKey, state_0.data, constructorContext_0.initialPrivateState);
     const partialProofData = {
       input: { value: [], alignment: [] },
       output: undefined,
@@ -269,11 +264,11 @@ export class Contract {
                                                  value: __compactRuntime.StateValue.newCell({ value: _descriptor_1.toValue(0),
                                                                                               alignment: _descriptor_1.alignment() }).encode() } },
                                        { ins: { cached: false, n: 1 } }]);
-    state_0.data = new __compactRuntime.ChargedState(context.callContext.currentQueryContext.state.state);
+    state_0.data = new __compactRuntime.ChargedState(context.currentQueryContext.state.state);
     return {
       currentContractState: state_0,
-      currentPrivateState: context.callContext.currentPrivateState,
-      currentZswapLocalState: context.callContext.currentZswapLocalState
+      currentPrivateState: context.currentPrivateState,
+      currentZswapLocalState: context.currentZswapLocalState
     }
   }
   _persistentHash_0(value_0) {
@@ -281,9 +276,9 @@ export class Contract {
     return result_0;
   }
   _localScore_0(context, partialProofData) {
-    const witnessContext_0 = __compactRuntime.createWitnessContext(ledger(context.callContext.currentQueryContext.state), context.callContext.currentPrivateState, context.callContext.currentQueryContext.address);
+    const witnessContext_0 = __compactRuntime.createWitnessContext(ledger(context.currentQueryContext.state), context.currentPrivateState, context.currentQueryContext.address);
     const [nextPrivateState_0, result_0] = this.witnesses.localScore(witnessContext_0);
-    context.callContext.currentPrivateState = nextPrivateState_0;
+    context.currentPrivateState = nextPrivateState_0;
     if (!(typeof(result_0) === 'bigint' && result_0 >= 0n && result_0 <= 255n)) {
       __compactRuntime.typeError('localScore',
                                  'return value',
@@ -298,9 +293,9 @@ export class Contract {
     return result_0;
   }
   _localSk_0(context, partialProofData) {
-    const witnessContext_0 = __compactRuntime.createWitnessContext(ledger(context.callContext.currentQueryContext.state), context.callContext.currentPrivateState, context.callContext.currentQueryContext.address);
+    const witnessContext_0 = __compactRuntime.createWitnessContext(ledger(context.currentQueryContext.state), context.currentPrivateState, context.currentQueryContext.address);
     const [nextPrivateState_0, result_0] = this.witnesses.localSk(witnessContext_0);
-    context.callContext.currentPrivateState = nextPrivateState_0;
+    context.currentPrivateState = nextPrivateState_0;
     if (!(result_0.buffer instanceof ArrayBuffer && result_0.BYTES_PER_ELEMENT === 1 && result_0.length === 32)) {
       __compactRuntime.typeError('localSk',
                                  'return value',
@@ -314,7 +309,7 @@ export class Contract {
     });
     return result_0;
   }
-  async _sealNote_0(context, partialProofData) {
+  _sealNote_0(context, partialProofData) {
     __compactRuntime.assert(_descriptor_1.fromValue(__compactRuntime.queryLedgerState(context,
                                                                                       partialProofData,
                                                                                       [
@@ -352,9 +347,9 @@ export class Contract {
     const score_0 = this._localScore_0(context, partialProofData);
     __compactRuntime.assert(score_0 >= 1n, 'Score must be at least 1');
     __compactRuntime.assert(score_0 <= 5n, 'Score must be at most 5');
-    const tmp_0 = this._commitWithSk_0(__compactRuntime.convertBigintToBytes(32,
-                                                                             score_0,
-                                                                             'sealed-vault.compact line 46 char 45'),
+    const tmp_0 = this._commitWithSk_0(__compactRuntime.convertFieldToBytes(32,
+                                                                            score_0,
+                                                                            'sealed-vault.compact line 46 char 45'),
                                        sk_0);
     __compactRuntime.queryLedgerState(context,
                                       partialProofData,
@@ -391,7 +386,7 @@ export class Contract {
                                        { ins: { cached: true, n: 1 } }]);
     return [];
   }
-  async _openRevealing_0(context, partialProofData) {
+  _openRevealing_0(context, partialProofData) {
     __compactRuntime.assert(_descriptor_1.fromValue(__compactRuntime.queryLedgerState(context,
                                                                                       partialProofData,
                                                                                       [
@@ -434,7 +429,7 @@ export class Contract {
                                        { ins: { cached: false, n: 1 } }]);
     return [];
   }
-  async _revealNote_0(context, partialProofData) {
+  _revealNote_0(context, partialProofData) {
     __compactRuntime.assert(_descriptor_1.fromValue(__compactRuntime.queryLedgerState(context,
                                                                                       partialProofData,
                                                                                       [
@@ -507,9 +502,9 @@ export class Contract {
                                                                                                                                 alignment: _descriptor_0.alignment() } }] } },
                                                                                                      { popeq: { cached: false,
                                                                                                                 result: undefined } }]).value),
-                                          this._commitWithSk_0(__compactRuntime.convertBigintToBytes(32,
-                                                                                                     score_0,
-                                                                                                     'sealed-vault.compact line 69 char 55'),
+                                          this._commitWithSk_0(__compactRuntime.convertFieldToBytes(32,
+                                                                                                    score_0,
+                                                                                                    'sealed-vault.compact line 69 char 55'),
                                                                sk_0)),
                             'Revealed score does not match the sealed commitment');
     __compactRuntime.queryLedgerState(context,
@@ -579,7 +574,7 @@ export function ledger(stateOrChargedState) {
   const state = stateOrChargedState instanceof __compactRuntime.StateValue ? stateOrChargedState : stateOrChargedState.state;
   const chargedState = stateOrChargedState instanceof __compactRuntime.StateValue ? new __compactRuntime.ChargedState(stateOrChargedState) : stateOrChargedState;
   const context = {
-    callContext: { currentQueryContext: new __compactRuntime.QueryContext(chargedState, __compactRuntime.dummyContractAddress()), currentGasCost: __compactRuntime.emptyRunningCost() },
+    currentQueryContext: new __compactRuntime.QueryContext(chargedState, __compactRuntime.dummyContractAddress()),
     costModel: __compactRuntime.CostModel.initialCostModel()
   };
   const partialProofData = {
@@ -866,7 +861,7 @@ export function ledger(stateOrChargedState) {
   };
 }
 const _emptyContext = {
-  callContext: { currentQueryContext: new __compactRuntime.QueryContext(new __compactRuntime.ContractState().data, __compactRuntime.dummyContractAddress()), currentGasCost: __compactRuntime.emptyRunningCost() }
+  currentQueryContext: new __compactRuntime.QueryContext(new __compactRuntime.ContractState().data, __compactRuntime.dummyContractAddress())
 };
 const _dummyContract = new Contract({
   localScore: (...args) => undefined, localSk: (...args) => undefined
@@ -874,10 +869,4 @@ const _dummyContract = new Contract({
 export const pureCircuits = {};
 export const contractReferenceLocations =
   { tag: 'publicLedgerArray', indices: { } };
-export const expectedVk = {
-  'openRevealing': '7e49e7518fe6eb291fbec194923a84ee7e36454fa4121cde67e03c313d777f70',
-  'revealNote': '8da31fe0643565e6edb0aa6ab11be065811c609a5f3189d2bfcb7d3fb8c8b868',
-  'sealNote': 'de0ee231c53957ab0801f999db7e057a5773bcd00f8b7f91461a01d722b12c52',
-};
-
 //# sourceMappingURL=index.js.map

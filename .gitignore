@@ -3,3 +3,8 @@ node_modules/
 target/  
 .env  
  
+deploy/node_modules/
+deploy/.env.*
+!deploy/.env.preprod.example
+deploy/contract/managed/
+*.log

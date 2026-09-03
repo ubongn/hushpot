@@ -100,7 +100,7 @@ export circuit join(): [] {
     assert(memberCount < capacity, "pot is full");
 
     members.insert(anchor);            // [COMMITMENT-ANCHOR]
-    memberCount = disclose(memberCount + 1); // size only - no identity
+    memberCount = disclose((memberCount + 1) as Uint<8>); // size only - no identity
 }
 
 // pledge ---------------------------------------------------------------
@@ -166,7 +166,7 @@ export circuit claim(): [] {
 
     claims.insert(nullifier);          // [COMMITMENT-ANCHOR] - who: hidden
     claimCount.increment(1);           // size only
-    claimTotal = disclose(claimTotal + amount); // [DELIBERATE-DISCLOSURE]
+    claimTotal = disclose((claimTotal + amount) as Uint<64>); // [DELIBERATE-DISCLOSURE]
 }
 
 // ------------------------------------------------------------------
@@ -184,9 +184,12 @@ circuit memberAnchor(sk: Bytes<32>): Bytes<32> {
 }
 
 circuit pledgeCommit(amount: Uint<64>, sk: Bytes<32>): Bytes<32> {
-    return persistentHash<Vector<2, Bytes<32>>>([amount as Field as Bytes<32>, sk]);
+    // disclose() here does NOT make the amount public - it declares that a
+    // SALTED HASH of the witness may reach the ledger, which we consider
+    // safe (amount is unrecoverable from H(amount || sk)).
+    return disclose(persistentHash<Vector<2, Bytes<32>>>([amount as Field as Bytes<32>, sk]));
 }
 
 circuit claimNullifier(sk: Bytes<32>): Bytes<32> {
-    return persistentHash<Vector<2, Bytes<32>>>([pad(32, "hushpot:claim:"), sk]);
+    return disclose(persistentHash<Vector<2, Bytes<32>>>([pad(32, "hushpot:claim:"), sk]));
 }
