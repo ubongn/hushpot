@@ -1,0 +1,192 @@
+pragma language_version >= 0.23;
+
+// Hushpot - M1 disclosure-boundary demonstration contract.
+//
+// A group savings pot where:
+//   * WHO joins is private (membership is stored as a commitment)
+//   * HOW MUCH each member pledges is private (pledge stored as a commitment)
+//   * a member can PROVE "my pledge >= X" without revealing the amount
+//   * an amount becomes public ONLY at claim time (settlement accounting)
+//
+// Every place data crosses the circuit boundary is marked:
+//   [STAYS-IN-CIRCUIT]  value never leaves the ZK circuit
+//   [COMMITMENT-ANCHOR] value crosses only as a salted hash
+//   [DELIBERATE-DISCLOSURE] value crosses in the clear - and WHY
+
+import CompactStandardLibrary;
+
+export enum PotState {
+    OPEN,
+    CLOSED
+}
+
+// ------------------------------------------------------------------
+// Public ledger state (everything here is deliberate)
+// ------------------------------------------------------------------
+
+// host: dApp-scoped public key of the pot host.
+// PUBLIC WHY: authorization ("only the host can close") must be
+// verifiable by anyone; a private host check would be unfalsifiable.
+export sealed ledger host: Bytes<32>;
+
+// capacity: maximum number of members.
+// PUBLIC WHY: pure coordination - "5 of 12 seats taken" - and it is a
+// rule prospective members must see before joining.
+export sealed ledger capacity: Uint<8>;
+
+// minPledge: smallest acceptable pledge amount.
+// PUBLIC WHY: it is a participation rule. Note the amount itself is
+// checked IN-CIRCUIT (`amount >= minPledge`), so observers learn only
+// pass/fail, never the pledged amount.
+export sealed ledger minPledge: Uint<64>;
+
+// state: OPEN / CLOSED state machine.
+// PUBLIC WHY: everyone must agree on whether new pledges are accepted.
+export ledger state: PotState;
+
+// members: commitment anchors of joined members (member address NEVER stored).
+// COMMITMENT-ANCHOR: on-chain holds H("hushpot:member:" || sk); the sk
+// exists only in the member's wallet.
+export ledger members: Set<Bytes<32>>;
+
+// pledges: member anchor -> pledge commitment. Neither side reveals
+// identity or amount.
+export ledger pledges: Map<Bytes<32>, Bytes<32>>;
+
+// claims: per-member claim nullifiers; prevents double claims without
+// revealing who claimed.
+export ledger claims: Set<Bytes<32>>;
+
+// memberCount / pledgeCount / claimCount: sizes only.
+// PUBLIC WHY: progress indicators ("7 of 12 joined") without identities.
+// memberCount: explicit Uint (not Counter) because the circuit compares it
+// against `capacity`; the write below is an explicit disclose - a size
+// crossing, never an identity.
+export ledger memberCount: Uint<8>;
+export ledger pledgeCount: Counter;
+export ledger claimCount: Counter;
+
+// claimTotal: SUM of claimed amounts.
+// DELIBERATE-DISCLOSURE: this is the one place an amount crosses the
+// boundary, at settlement, because payout accounting must be auditable.
+export ledger claimTotal: Uint<64>;
+
+// ------------------------------------------------------------------
+// Witnesses (private inputs supplied by the caller's wallet)
+// ------------------------------------------------------------------
+
+witness localSk(): Bytes<32>;
+witness localPledgeAmount(): Uint<64>;
+
+constructor(cap: Uint<8>, minimum: Uint<64>) {
+    const sk = localSk();
+    host = dappKey(sk);
+    assert(cap > 0, "capacity must be positive");
+    assert(minimum > 0, "minimum pledge must be positive");
+    capacity = disclose(cap);
+    minPledge = disclose(minimum);
+    state = PotState.OPEN;
+}
+
+// join -----------------------------------------------------------------
+// Member identity: [STAYS-IN-CIRCUIT]. The ledger only receives the
+// commitment anchor. memberCount crosses as a size, by design.
+export circuit join(): [] {
+    const sk = localSk();
+    const anchor = memberAnchor(sk);
+
+    assert(state == PotState.OPEN, "pot is not open");
+    assert(!members.member(anchor), "already a member");
+    assert(memberCount < capacity, "pot is full");
+
+    members.insert(anchor);            // [COMMITMENT-ANCHOR]
+    memberCount = disclose(memberCount + 1); // size only - no identity
+}
+
+// pledge ---------------------------------------------------------------
+// amount is a circuit parameter: private BY DEFAULT in Compact.
+// It is compared against the public minPledge inside the circuit, and
+// crosses only as H(amount || sk). [COMMITMENT-ANCHOR]
+export circuit pledge(): [] {
+    const sk = localSk();
+    const anchor = memberAnchor(sk);
+    const amount = localPledgeAmount();
+
+    assert(state == PotState.OPEN, "pot is not open");
+    assert(members.member(anchor), "not a member");
+    assert(!pledges.member(anchor), "already pledged");
+    assert(amount >= minPledge, "pledge below minimum");
+
+    pledges.insert(anchor, pledgeCommit(amount, sk)); // [COMMITMENT-ANCHOR]
+    pledgeCount.increment(1);          // size only - no amount
+}
+
+// provePledgeAtLeast ----------------------------------------------------
+// Pure private predicate. NOTHING crosses: no ledger write, no return
+// value, no disclosure. A successful transaction IS the statement
+// "I am a member and my committed pledge is at least `threshold`".
+// Observers learn only that the proof verified - not who, not how much,
+// not even the threshold (circuit parameters are private by default).
+export circuit provePledgeAtLeast(threshold: Uint<64>): [] {
+    const sk = localSk();
+    const anchor = memberAnchor(sk);
+    const amount = localPledgeAmount();
+
+    assert(members.member(anchor), "not a member");
+    assert(pledges.lookup(anchor) == pledgeCommit(amount, sk), "no such pledge");
+    assert(amount >= threshold, "pledge below threshold");
+    // [STAYS-IN-CIRCUIT] - deliberately no ledger write
+}
+
+// closeEntries -----------------------------------------------------------
+// Host-only. PUBLIC WHY: the closing moment must be an agreed fact so
+// "no more pledges" is enforceable by everyone.
+export circuit closeEntries(): [] {
+    const sk = localSk();
+    assert(dappKey(sk) == host, "only the host can close");
+    assert(state == PotState.OPEN, "pot is not open");
+
+    state = PotState.CLOSED;
+}
+
+// claim -------------------------------------------------------------------
+// Settlement. The amount finally crosses here - DELIBERATELY - because
+// payout accounting must be auditable when value moves. Members who
+// never claim never reveal anything.
+export circuit claim(): [] {
+    const sk = localSk();
+    const anchor = memberAnchor(sk);
+    const amount = localPledgeAmount();
+    const nullifier = claimNullifier(sk);
+
+    assert(state == PotState.CLOSED, "pot is not closed yet");
+    assert(members.member(anchor), "not a member");
+    assert(pledges.lookup(anchor) == pledgeCommit(amount, sk), "no such pledge");
+    assert(!claims.member(nullifier), "already claimed");
+
+    claims.insert(nullifier);          // [COMMITMENT-ANCHOR] - who: hidden
+    claimCount.increment(1);           // size only
+    claimTotal = disclose(claimTotal + amount); // [DELIBERATE-DISCLOSURE]
+}
+
+// ------------------------------------------------------------------
+// Helpers
+// ------------------------------------------------------------------
+
+// dApp-scoped key: unlinkable across dApps (same pattern as the
+// official election example).
+circuit dappKey(sk: Bytes<32>): Bytes<32> {
+    return disclose(persistentHash<Vector<2, Bytes<32>>>([pad(32, "hushpot:host:"), sk]));
+}
+
+circuit memberAnchor(sk: Bytes<32>): Bytes<32> {
+    return persistentCommit<Bytes<32>>(pad(32, "hushpot:member:"), sk);
+}
+
+circuit pledgeCommit(amount: Uint<64>, sk: Bytes<32>): Bytes<32> {
+    return persistentHash<Vector<2, Bytes<32>>>([amount as Field as Bytes<32>, sk]);
+}
+
+circuit claimNullifier(sk: Bytes<32>): Bytes<32> {
+    return persistentHash<Vector<2, Bytes<32>>>([pad(32, "hushpot:claim:"), sk]);
+}

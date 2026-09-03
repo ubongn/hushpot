@@ -1,0 +1,85 @@
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+// Sealed Vault: privacy-first note storage.
+// Phase 1 (SEALING): each participant commits to a private score 1..5.
+//   On-chain: only an identity commitment + a content commitment. No score visible.
+// Phase 2 (REVEALING): participants reveal; the circuit proves the revealed
+//   score matches the earlier commitment (cannot be changed after sealing).
+
+export enum VaultState {
+    SEALING,
+    REVEALING
+}
+
+export ledger state: VaultState;
+
+// identity commitment (dapp-scoped pubkey) -> score commitment
+export ledger commitments: Map<Bytes<32>, Bytes<32>>;
+
+// identity commitment -> disclosed score (filled during reveal)
+export ledger revealedScores: Map<Bytes<32>, Uint<8>>;
+
+export ledger sealedCount: Counter;
+export ledger revealedCount: Counter;
+export ledger scoreTotal: Counter;
+
+// private inputs supplied off-chain by the caller's wallet
+witness localScore(): Uint<8>;
+witness localSk(): Bytes<32>;
+
+constructor() {
+    state = VaultState.SEALING;
+}
+
+export circuit sealNote(): [] {
+    assert(state == VaultState.SEALING, "Vault is not in the sealing phase");
+    const sk = localSk();
+    const pubKey = dappPubKey(sk);
+    assert(!commitments.member(pubKey), "A note is already sealed for this key");
+
+    const score = localScore();
+    assert(score >= 1, "Score must be at least 1");
+    assert(score <= 5, "Score must be at most 5");
+
+    commitments.insert(pubKey, commitWithSk(score as Field as Bytes<32>, sk));
+    sealedCount.increment(1);
+}
+
+export circuit openRevealing(): [] {
+    assert(state == VaultState.SEALING, "Vault is not in the sealing phase");
+    assert(sealedCount > 0, "At least one note must be sealed before revealing");
+    state = VaultState.REVEALING;
+}
+
+export circuit revealNote(): [] {
+    assert(state == VaultState.REVEALING, "Vault is not in the revealing phase");
+    const sk = localSk();
+    const pubKey = dappPubKey(sk);
+    assert(commitments.member(pubKey), "No sealed note for this key");
+    assert(!revealedScores.member(pubKey), "Note already revealed");
+
+    const score = localScore();
+    assert(score >= 1, "Score must be at least 1");
+    assert(score <= 5, "Score must be at most 5");
+
+    // the money: proves the revealed score equals the sealed one, without
+    // leaking anything else about the sealing call
+    assert(commitments.lookup(pubKey) == commitWithSk(score as Field as Bytes<32>, sk), "Revealed score does not match the sealed commitment");
+
+    revealedScores.insert(pubKey, disclose(score));
+    revealedCount.increment(1);
+    scoreTotal.increment(disclose(score));
+}
+
+// hash score together with the caller's secret so a low-entropy score (1..5)
+// cannot be brute-forced from the on-chain commitment
+circuit commitWithSk(score: Bytes<32>, sk: Bytes<32>): Bytes<32> {
+    return disclose(persistentHash<Vector<2, Bytes<32>>>([score, sk]));
+}
+
+// dapp-scoped public key: unlinkable across dapps, stable inside this one
+circuit dappPubKey(sk: Bytes<32>): Bytes<32> {
+    return disclose(persistentHash<Vector<2, Bytes<32>>>([pad(32, "sealed-vault:pk:v1"), sk]));
+}
