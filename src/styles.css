@@ -397,3 +397,16 @@ input.masked {
   color: var(--text-dim);
   font-weight: 600;
 }
+
+/* ---------- circuit flow additions ---------- */
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 20px 0;
+}
+
+.small-btn {
+  padding: 4px 10px;
+  font-size: 12.5px;
+}
