@@ -21,7 +21,10 @@ export function buildProviders<C extends string = SealedVaultCircuits>(
     return {
         privateStateProvider: levelPrivateStateProvider({
             privateStateStoreName,
-            privateStoragePasswordProvider: () => 'midnight-deploy-password',
+            // NOTE: the level store enforces password strength (>= 3 of
+            // upper/lower/digit/special). This is local-at-rest encryption
+            // for the private-state cache, NOT a chain secret.
+            privateStoragePasswordProvider: () => 'Hushpot-Deploy-2026!',
             accountId: wallet.getCoinPublicKey(),
         }),
         publicDataProvider: indexerPublicDataProvider(
