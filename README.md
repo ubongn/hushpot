@@ -2,10 +2,10 @@
 > Private group savings pots on Midnight — pledge amounts stay secret; the pot only proves you've met the minimum.
 
 ## Contract Address
-| Network | Address |
-|----------|----------------------------------|
-| Preview  | [PASTE ADDRESS AFTER DEPLOY] |
-| Preprod  | [PASTE ADDRESS AFTER DEPLOY] |
+| Network | Address | Deploy Tx | Block |
+|---------|---------|-----------|-------|
+| Preview  | [PASTE ADDRESS AFTER DEPLOY] | — | — |
+| Preprod  | `b14415c2f686ea1ab2dee103876cc3c2012830bc6a5e56a48d87f013c6f4abb4` | `0260d4a06756e8e955679f5493a9b66ba58a4d1901cea137dcc977e762e191ae` | 2,401,203 |
 
 ## What This Does
 HushPot is a group savings pot in the esusu / ajo tradition: a host opens a pot with a fixed capacity (number of seats) and a minimum pledge, members join and put money in while entries are open, the host closes entries, and valid members claim from the pot afterwards.
