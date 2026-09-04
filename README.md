@@ -77,8 +77,10 @@ Preprod faucet funding the deployer wallet with 1000 tNIGHT:
 
 ![Preprod faucet](screenshots/04-preprod-faucet-1000tnight.png)
 
-Test suite passing:
+Test suite passing — 51/51 (circuit logic & state transitions, privacy surface, wallet-state persistence), run 2026-09-04 14:45:
 
-![Tests passing](screenshots/05-tests-29-passing.png)
+![Tests passing](screenshots/05-tests-51-passing.png)
 
-Deployed contract address on Preprod: *coming after Preprod deploy*.
+Deployed contract address on Preprod, verified on the public indexer (deploy tx `0260d4a0...e191ae`, block 2,401,203):
+
+![Deployed contract address](screenshots/02-deployed-address.png)
