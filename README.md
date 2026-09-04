@@ -7,6 +7,17 @@
 | Preview  | [PASTE ADDRESS AFTER DEPLOY] | — | — |
 | Preprod  | `b14415c2f686ea1ab2dee103876cc3c2012830bc6a5e56a48d87f013c6f4abb4` | `0260d4a06756e8e955679f5493a9b66ba58a4d1901cea137dcc977e762e191ae` | 2,401,203 |
 
+## Live Demo
+<!-- TODO: replace with the real Vercel URL after first deploy -->
+> **URL:** *(placeholder — deploy with `vercel` or push to a Vercel-linked repo; `vercel.json` is preconfigured with SPA rewrites and wasm content-types)*
+
+Run locally instead:
+```bash
+npm run dev          # vite dev server on http://localhost:5173
+# or a production preview:
+npm run build && npm run preview
+```
+
 ## What This Does
 HushPot is a group savings pot in the esusu / ajo tradition: a host opens a pot with a fixed capacity (number of seats) and a minimum pledge, members join and put money in while entries are open, the host closes entries, and valid members claim from the pot afterwards.
 
@@ -17,10 +28,27 @@ What makes it a Midnight dApp is the disclosure boundary. The pot itself lives o
 - **PRIVATE (witness, never on-chain):** `localPledgeAmount` (each member's actual pledge amount) and `localSk` (member secret key). Both live only in the member's wallet; the chain sees salted hashes at most.
 - **PROVES without revealing:** `provePledgeAtLeast` — a member proves their committed pledge ≥ a threshold without disclosing the amount (or the threshold). The circuit writes nothing to the ledger; a successful proof *is* the statement.
 
+## Privacy Claim
+What an on-chain observer (indexer, block explorer, anyone) can and cannot learn from HushPot transactions:
+
+**Observer sees:**
+- Pot state: open/closed, capacity, minimum-pledge parameter
+- Membership: that a commitment joined the pot (an anchor — never an address)
+- Pledge existence: that a salted commitment was published
+- Proof validity: that a verified "pledge ≥ threshold" statement passed (the fact, not the number)
+- Pot-level counters: member count, pledge count, claim count, settled total
+
+**Observer cannot see:**
+- Pledge amounts — only salted commitments cross the boundary
+- Wallet balances — nothing about a member's other funds
+- Member identities/keys — `localSk` never leaves the wallet; addresses are never stored
+- The threshold in a proof — the statement is proven, not parameterized on-chain
+
 ## Tech Stack
 - Midnight network (Preview / Preprod)
 - Compact smart-contract language, `compactc` 0.31.1
 - TypeScript + midnight-js 4.1.1 (contract bindings, wallet, deploy driver)
+- **Web app:** React 18 + Vite 5 (`src/`), Lace wallet via `@midnight-ntwrk/dapp-connector-api` — local proving in the wallet, lazy-fetched ZK keys, in-memory session private state
 - Node.js 22, Vitest
 - Docker — Midnight proof server (and optional local devnet)
 
