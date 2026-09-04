@@ -19,10 +19,26 @@ export default defineConfig({
     // ledger-v8 wasm + midnight-js deps are large; don't warn about it.
     chunkSizeWarningLimit: 12_000,
   },
-  // The @midnight-ntwrk packages ship ESM + wasm; keep them bundled rather
-  // than pre-bundled by dev-server (avoids duplicated wasm instances).
+  // The @midnight-ntwrk packages ship ESM + wasm with mixed CJS transitive
+  // deps (apollo, subsquid, isomorphic-ws). esbuild's dep pre-bundler chokes
+  // on their re-export chains; serve them unbundled instead (rollup handles
+  // the same graph fine for production builds).
   optimizeDeps: {
-    exclude: ['@midnight-ntwrk/ledger-v8'],
+    exclude: [
+      '@midnight-ntwrk/ledger-v8',
+      '@midnight-ntwrk/onchain-runtime-v3',
+      '@midnight-ntwrk/compact-runtime',
+      '@midnight-ntwrk/compact-js',
+      '@midnight-ntwrk/midnight-js',
+      '@midnight-ntwrk/midnight-js-compact',
+      '@midnight-ntwrk/midnight-js-contracts',
+      '@midnight-ntwrk/midnight-js-indexer-public-data-provider',
+      '@midnight-ntwrk/midnight-js-network-id',
+      '@midnight-ntwrk/midnight-js-protocol',
+      '@midnight-ntwrk/midnight-js-types',
+      '@midnight-ntwrk/midnight-js-utils',
+      '@midnight-ntwrk/dapp-connector-api',
+    ],
   },
   server: {
     port: 5173,
