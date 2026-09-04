@@ -33,6 +33,7 @@ import pino from 'pino';
 
 import { getConfig } from './config.js';
 import { MidnightWalletProvider, syncWallet } from './wallet.js';
+import { walletStateEnabled } from './wallet-state.js';
 import { buildProviders, type SealedVaultProviders } from './providers.js';
 import {
   CompiledSealedVaultContract,
@@ -104,6 +105,24 @@ async function main() {
   const secret = { kind: 'seed' as const, value: seedHex() };
   const wallet = await MidnightWalletProvider.build(logger, envConfig, secret);
 
+  // File-backed wallet state (WALLET_STATE_FILE, default ON): flush on
+  // SIGINT/SIGTERM so a restart resumes the sync instead of starting from
+  // genesis. (MidnightWalletProvider.stop() flushes as well.)
+  if (walletStateEnabled()) {
+    const onSignal = (signal: NodeJS.Signals) => {
+      void (async () => {
+        logger.info(`${signal} received — flushing wallet state, then exiting...`);
+        try {
+          await wallet.stop();
+        } finally {
+          process.exit(signal === 'SIGINT' ? 130 : 143);
+        }
+      })();
+    };
+    process.once('SIGINT', onSignal);
+    process.once('SIGTERM', onSignal);
+  }
+
   if (mode === 'address') {
     const addr = String(wallet.unshieldedKeystore.getBech32Address());
     console.log(`\nUnshielded address (${network}): ${addr}`);
@@ -113,6 +132,7 @@ async function main() {
     return;
   }
 
+  try {
   await wallet.start();
   await syncWallet(logger, wallet.wallet, 60 * 60_000);
 
@@ -204,8 +224,10 @@ async function main() {
     ) + '\n',
   );
   console.log('deploy-record.json written.');
-
-  await wallet.stop();
+  } finally {
+    // stop() is idempotent and flushes the wallet state file on every path.
+    await wallet.stop();
+  }
 }
 
 main().catch((err) => {

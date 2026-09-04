@@ -32,6 +32,7 @@ import pino from 'pino';
 
 import { getConfig } from './config.js';
 import { MidnightWalletProvider, syncWallet } from './wallet.js';
+import { walletStateEnabled } from './wallet-state.js';
 import { buildProviders } from './providers.js';
 import {
   CompiledHushpotContract,
@@ -135,6 +136,26 @@ async function main() {
   const secret = { kind: 'seed' as const, value: seedHex() };
   const wallet = await MidnightWalletProvider.build(logger, envConfig, secret);
 
+  // File-backed wallet state (WALLET_STATE_FILE, default ON): checkpoint the
+  // tx history + sync cursors periodically during long syncs and on
+  // SIGINT/SIGTERM so a restart resumes instead of re-scanning from genesis.
+  if (walletStateEnabled()) {
+    const checkpoint = setInterval(() => void wallet.flush(), 10 * 60_000);
+    checkpoint.unref?.();
+    const onSignal = (signal: NodeJS.Signals) => {
+      void (async () => {
+        logger.info(`${signal} received — flushing wallet state, then exiting...`);
+        try {
+          await wallet.stop();
+        } finally {
+          process.exit(signal === 'SIGINT' ? 130 : 143);
+        }
+      })();
+    };
+    process.once('SIGINT', onSignal);
+    process.once('SIGTERM', onSignal);
+  }
+
   if (mode === 'address') {
     const addr = String(wallet.unshieldedKeystore.getBech32Address());
     console.log(`\nUnshielded address (${network}): ${addr}`);
@@ -147,6 +168,7 @@ async function main() {
     throw new Error(`Unknown mode '${mode}' (address|deploy|lifecycle|demo)`);
   }
 
+  try {
   await wallet.start();
   // Preprod dust-ledger scan from genesis takes >1h even with turbo batch settings,
   // so allow a generous ceiling (dust ~285 blocks/s observed; ~1.48M blocks).
@@ -290,8 +312,12 @@ async function main() {
     );
   }
   logger.info('=== HUSHPOT LIFECYCLE VERIFIED ON-CHAIN ===');
-
-  await wallet.stop();
+  } finally {
+    // Covers every exit path (deploy return above included — stop() is
+    // idempotent) so the wallet state file is written even when the run
+    // fails partway through the sync/deploy.
+    await wallet.stop();
+  }
 }
 
 main().catch(async (err) => {

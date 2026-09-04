@@ -8,4 +8,6 @@ deploy/.env.*
 !deploy/.env.preprod.example
 deploy/contract/managed/
 *.log
-deploy/logs/  
+deploy/logs/
+# runtime wallet state (LevelDB private-state cache + file-backed tx history)
+deploy/midnight-level-db/

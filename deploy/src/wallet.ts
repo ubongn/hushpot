@@ -21,6 +21,13 @@ import {
   WalletEntrySchema,
   createKeystore,
   mergeWalletEntries,
+  DustWallet,
+  PublicKey,
+  ShieldedWallet,
+  UnshieldedWallet,
+  type ShieldedWalletAPI,
+  type UnshieldedWalletAPI,
+  type DustWalletAPI,
 } from '@midnight-ntwrk/wallet-sdk';
 import {
   type DustWalletOptions,
@@ -30,6 +37,14 @@ import {
 } from '@midnight-ntwrk/testkit-js';
 import * as Rx from 'rxjs';
 import type { Logger } from 'pino';
+import {
+  type PersistedWalletState,
+  loadPersistedWalletState,
+  persistWalletState,
+  sectionSnapshotMatches,
+  walletStateEnabled,
+  walletStatePath,
+} from './wallet-state.js';
 
 export type WalletSecret =
   | { kind: 'seed'; value: string }
@@ -39,12 +54,20 @@ export class MidnightWalletProvider implements MidnightProvider, WalletProvider 
   readonly wallet: WalletFacade;
   readonly unshieldedKeystore: UnshieldedKeystore;
 
+  private stopped = false;
+  private flushInFlight: Promise<void> | null = null;
+
   private constructor(
     private readonly logger: Logger,
     wallet: WalletFacade,
     private readonly zswapSecretKeys: ZswapSecretKeys,
     private readonly dustSecretKey: DustSecretKey,
     unshieldedKeystore: UnshieldedKeystore,
+    private readonly shieldedWallet: ShieldedWalletAPI,
+    private readonly unshieldedWallet: UnshieldedWalletAPI,
+    private readonly dustWallet: DustWalletAPI,
+    private readonly txHistoryStorage: InMemoryTransactionHistoryStorage,
+    private readonly networkId: string,
   ) {
     this.wallet = wallet;
     this.unshieldedKeystore = unshieldedKeystore;
@@ -82,7 +105,46 @@ export class MidnightWalletProvider implements MidnightProvider, WalletProvider 
     await this.wallet.start(this.zswapSecretKeys, this.dustSecretKey);
   }
 
+  /**
+   * Persist tx history + section snapshots (sync cursors included) to the
+   * wallet state file. Safe to call at any time while the wallet is running
+   * (also used as a periodic checkpoint during long syncs); failures are
+   * logged and never propagate — persistence must not kill a deploy.
+   */
+  async flush(): Promise<void> {
+    if (!walletStateEnabled()) return;
+    this.flushInFlight ??= (async () => {
+      try {
+        const [shielded, unshielded, dust, txHistory] = await Promise.all([
+          this.shieldedWallet.serializeState(),
+          this.unshieldedWallet.serializeState(),
+          this.dustWallet.serializeState(),
+          this.txHistoryStorage.serialize(),
+        ]);
+        const path = persistWalletState({
+          version: 1,
+          networkId: this.networkId,
+          savedAt: new Date().toISOString(),
+          txHistory,
+          sections: { shielded, unshielded, dust },
+        });
+        this.logger.info(`Wallet state persisted to ${path}`);
+      } catch (err) {
+        this.flushInFlight = null; // allow a later checkpoint to retry
+        this.logger.warn(
+          `Wallet state persistence failed (continuing): ${err instanceof Error ? err.message : err}`,
+        );
+      }
+    })();
+    return this.flushInFlight;
+  }
+
   async stop(): Promise<void> {
+    if (this.stopped) return;
+    this.stopped = true;
+    // Flush BEFORE stopping the facade — section state observables must still
+    // be live for serializeState() to read the sync cursors.
+    await this.flush();
     return this.wallet.stop();
   }
 
@@ -102,8 +164,37 @@ export class MidnightWalletProvider implements MidnightProvider, WalletProvider 
     // 4ms spacing between batches) throttles the dust-ledger indexer scan to ~150 blocks/s,
     // i.e. ~2.5h to scan preprod from genesis (~1.48M blocks) — which is what killed the
     // previous deploy sessions. With turbo batching the indexer stream becomes the bottleneck
-    // instead of an artificial sleep. Disable by setting MIDNIGHT_SYNC_TURBO=0.
+    // instead of an artificial sleep. Disable by setting MIDNIGHT_SYNC_TURBO=0. (Since the
+    // file-backed wallet state below persists sync cursors across runs, a genesis scan only
+    // ever happens once per machine.)
     const turbo = process.env['MIDNIGHT_SYNC_TURBO'] !== '0';
+
+    // ---- Persistent wallet state (tx history + section sync cursors) ----
+    // Hydrate from the previous run when WALLET_STATE_FILE is enabled (the
+    // default); a restored wallet resumes indexer scans from its saved
+    // appliedIndex/appliedId cursor instead of re-scanning from genesis.
+    const persisted: PersistedWalletState | null = loadPersistedWalletState(
+      env.walletNetworkId,
+      logger,
+    );
+    const txHistoryStorage = persisted?.txHistory
+      ? InMemoryTransactionHistoryStorage.restore(
+          persisted.txHistory,
+          WalletEntrySchema,
+          mergeWalletEntries,
+        )
+      : new InMemoryTransactionHistoryStorage(WalletEntrySchema, mergeWalletEntries);
+    if (persisted?.txHistory) {
+      logger.info(
+        `Tx history hydrated: ${(await txHistoryStorage.getAll()).length} entries ` +
+          `(state file ${walletStatePath()})`,
+      );
+    } else {
+      logger.info(
+        `Tx history starting empty${walletStateEnabled() ? ` (will persist to ${walletStatePath()})` : ' (WALLET_STATE_FILE disabled)'}`,
+      );
+    }
+
     const config = {
       indexerClientConnection: {
         indexerHttpUrl: env.indexer,
@@ -115,10 +206,7 @@ export class MidnightWalletProvider implements MidnightProvider, WalletProvider 
       provingServerUrl: new URL(env.proofServer),
       networkId: env.walletNetworkId,
       relayURL: new URL(env.nodeWS),
-      txHistoryStorage: new InMemoryTransactionHistoryStorage(
-        WalletEntrySchema,
-        mergeWalletEntries,
-      ),
+      txHistoryStorage,
       costParameters: { feeBlocksMargin: 5 },
       ...(turbo ? { batchUpdates: { size: 1_000, timeout: 100, spacing: 0 } } : {}),
     } as DefaultConfiguration;
@@ -128,19 +216,73 @@ export class MidnightWalletProvider implements MidnightProvider, WalletProvider 
         ? WalletSeeds.fromMnemonic(secret.value)
         : WalletSeeds.fromMasterSeed(secret.value);
     const keystore = createKeystore(seeds.unshielded, env.walletNetworkId);
-    const shieldedWallet = WalletFactory.createShieldedWallet(
-      config,
-      seeds.shielded,
+    const zswapKeys = ZswapSecretKeys.fromSeed(seeds.shielded);
+    const dustKeys = DustSecretKey.fromSeed(seeds.dust);
+
+    // Section snapshots are only trusted when their embedded public keys match
+    // the keys derived from THIS seed; otherwise fall back to a fresh wallet.
+    const sections = persisted?.sections ?? {};
+    const restoreSection = async <T>(
+      name: string,
+      snapshot: string | undefined,
+      matches: boolean,
+      restore: () => Promise<T> | T,
+      fresh: () => T,
+    ): Promise<T> => {
+      if (!snapshot) return fresh();
+      if (!matches) {
+        logger.warn(`Ignoring persisted ${name} snapshot: key mismatch for this seed`);
+        return fresh();
+      }
+      try {
+        const wallet = await restore();
+        logger.info(`${name} wallet restored from snapshot (resumes from saved cursor)`);
+        return wallet;
+      } catch (err) {
+        logger.warn(
+          `Failed to restore ${name} wallet from snapshot (${err instanceof Error ? err.message : err}); starting fresh`,
+        );
+        return fresh();
+      }
+    };
+
+    const shieldedWallet = await restoreSection<ShieldedWalletAPI>(
+      'shielded',
+      sections.shielded,
+      sectionSnapshotMatches(sections.shielded, {
+        'publicKeys.coinPublicKey': zswapKeys.coinPublicKey,
+      }),
+      () => WalletFactory.restoreShieldedWallet(config, sections.shielded!),
+      () => WalletFactory.createShieldedWallet(config, seeds.shielded),
     );
-    const unshieldedWallet = WalletFactory.createUnshieldedWallet(
-      config,
-      keystore,
+
+    // Note: built directly (mirroring WalletFactory.createUnshieldedWallet)
+    // so the unshielded section shares the SAME tx history storage as
+    // shielded/dust — the factory overwrites config.txHistoryStorage with a
+    // private in-memory instance, which would split the persisted history.
+    const unshieldedWallet = await restoreSection<UnshieldedWalletAPI>(
+      'unshielded',
+      sections.unshielded,
+      sectionSnapshotMatches(sections.unshielded, {
+        'publicKey.address': keystore.getBech32Address(),
+      }),
+      () => UnshieldedWallet(config).restore(sections.unshielded!),
+      () =>
+        UnshieldedWallet({ ...config, txHistoryStorage }).startWithPublicKey(
+          PublicKey.fromKeyStore(keystore),
+        ),
     );
-    const dustWallet = WalletFactory.createDustWallet(
-      config,
-      seeds.dust,
-      dustOptions,
+
+    const dustWallet = await restoreSection<DustWalletAPI>(
+      'dust',
+      sections.dust,
+      sectionSnapshotMatches(sections.dust, {
+        'publicKey.publicKey': dustKeys.publicKey,
+      }),
+      () => DustWallet(config).restore(sections.dust!),
+      () => WalletFactory.createDustWallet(config, seeds.dust, dustOptions),
     );
+
     const wallet = await WalletFactory.createWalletFacade(
       config,
       shieldedWallet,
@@ -155,9 +297,14 @@ export class MidnightWalletProvider implements MidnightProvider, WalletProvider 
     return new MidnightWalletProvider(
       logger,
       wallet,
-      ZswapSecretKeys.fromSeed(seeds.shielded),
-      DustSecretKey.fromSeed(seeds.dust),
+      zswapKeys,
+      dustKeys,
       keystore,
+      shieldedWallet,
+      unshieldedWallet,
+      dustWallet,
+      txHistoryStorage,
+      env.walletNetworkId,
     );
   }
 }
