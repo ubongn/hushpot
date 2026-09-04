@@ -113,7 +113,12 @@ export class MidnightWalletProvider implements MidnightProvider, WalletProvider 
    */
   async flush(): Promise<void> {
     if (!walletStateEnabled()) return;
-    this.flushInFlight ??= (async () => {
+    if (this.flushInFlight) return this.flushInFlight;
+    // Dedupe concurrent callers (periodic checkpoint racing stop()), but
+    // ALWAYS clear the slot once settled — a resolved promise left here
+    // would turn every later checkpoint into a no-op (exactly one write
+    // per process, observed as run6's tx-history.json stuck at 11:21).
+    const op = (async () => {
       try {
         const [shielded, unshielded, dust, txHistory] = await Promise.all([
           this.shieldedWallet.serializeState(),
@@ -130,13 +135,17 @@ export class MidnightWalletProvider implements MidnightProvider, WalletProvider 
         });
         this.logger.info(`Wallet state persisted to ${path}`);
       } catch (err) {
-        this.flushInFlight = null; // allow a later checkpoint to retry
         this.logger.warn(
           `Wallet state persistence failed (continuing): ${err instanceof Error ? err.message : err}`,
         );
       }
     })();
-    return this.flushInFlight;
+    this.flushInFlight = op;
+    try {
+      await op;
+    } finally {
+      if (this.flushInFlight === op) this.flushInFlight = null;
+    }
   }
 
   async stop(): Promise<void> {
