@@ -63,6 +63,23 @@ const MIN_PLEDGE = 10n;
 const ALICE_AMOUNT = 25n;
 const BOB_AMOUNT = 40n;
 
+// Hard ceiling for deployContract: it hung silently for 95+ minutes on run5
+// (0% CPU, idle proof server, no log output). On expiry we flush the wallet
+// state file (so the next attempt resumes from the saved sync cursors instead
+// of re-syncing from genesis) and exit with code 2, which the supervisor
+// script deploy/tools/run-until-deployed.cmd treats as "relaunch".
+const DEPLOY_TIMEOUT_MS = (() => {
+  const raw = Number(process.env['DEPLOY_TIMEOUT_MS'] ?? 20 * 60_000);
+  return Number.isFinite(raw) && raw > 0 ? raw : 20 * 60_000;
+})();
+
+class DeployTimeoutError extends Error {
+  constructor(ms: number) {
+    super(`deployContract timed out after ${ms}ms (DEPLOY_TIMEOUT_MS)`);
+    this.name = 'DeployTimeoutError';
+  }
+}
+
 function loadEnvFile(): Record<string, string> {
   if (!existsSync(envFile)) return {};
   const out: Record<string, string> = {};
@@ -193,16 +210,51 @@ async function main() {
 
   if (mode === 'deploy' || mode === 'demo') {
     logger.info(
-      `Deploying Hushpot (capacity=${CAPACITY}, minPledge=${MIN_PLEDGE}) to '${network}'...`,
+      `Deploying Hushpot (capacity=${CAPACITY}, minPledge=${MIN_PLEDGE}) to '${network}'... ` +
+        `[deploy timeout: ${DEPLOY_TIMEOUT_MS}ms]`,
     );
     const host = createHushpotPrivateState(actorSk('host'), 50n);
-    const deployed: DeployedContract<Contract<HushpotPrivateState>> =
-      await deployContract<Contract<HushpotPrivateState>>(providers, {
+    const deployPromise =
+      deployContract<Contract<HushpotPrivateState>>(providers, {
         compiledContract: CompiledHushpotContract as never,
         privateStateId: 'Host',
         initialPrivateState: host,
         args: [CAPACITY, MIN_PLEDGE],
       });
+    deployPromise.catch(() => {}); // never becomes an unhandled rejection if the timeout wins
+    let deployTimer: NodeJS.Timeout | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      deployTimer = setTimeout(
+        () => reject(new DeployTimeoutError(DEPLOY_TIMEOUT_MS)),
+        DEPLOY_TIMEOUT_MS,
+      );
+      deployTimer.unref?.();
+    });
+    let deployed: DeployedContract<Contract<HushpotPrivateState>>;
+    try {
+      deployed = await Promise.race([deployPromise, timeoutPromise]);
+    } catch (err) {
+      if (err instanceof DeployTimeoutError) {
+        logger.error(err.message);
+        logger.error(
+          'Hanging deploy detected — flushing wallet state, then exiting with code 2 ' +
+            '(supervisor: tools/run-until-deployed.cmd will relaunch; hydrate makes the next sync shorter)',
+        );
+        try {
+          await wallet.flush();
+        } catch (flushErr) {
+          logger.error(
+            `Wallet state flush failed: ${flushErr instanceof Error ? flushErr.message : flushErr}`,
+          );
+        }
+        // Hard exit, skipping the finally-block stop(): facade.stop() on a
+        // wedged wallet may itself hang, and we already persisted the state.
+        process.exit(2);
+      }
+      throw err;
+    } finally {
+      clearTimeout(deployTimer);
+    }
     contractAddress = deployed.deployTxData.public.contractAddress;
     logger.info(`=== HUSHPOT DEPLOYED ===`);
     logger.info(`Contract address: ${contractAddress}`);
