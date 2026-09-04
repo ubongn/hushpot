@@ -8,8 +8,8 @@
 | Preprod  | `b14415c2f686ea1ab2dee103876cc3c2012830bc6a5e56a48d87f013c6f4abb4` | `0260d4a06756e8e955679f5493a9b66ba58a4d1901cea137dcc977e762e191ae` | 2,401,203 |
 
 ## Live Demo
-<!-- TODO: replace with the real Vercel URL after first deploy -->
-> **URL:** *(placeholder — deploy with `vercel` or push to a Vercel-linked repo; `vercel.json` is preconfigured with SPA rewrites and wasm content-types)*
+
+> **URL:** **https://hushpot.vercel.app/** — HushPot dApp: connect [Lace](https://chromewebstore.google.com/detail/lace/gafhhkghbfjjkeiendhlofajokpaflmk) on Preprod, view live pot state, join a pot, and prove a pledge meets the minimum without revealing the amount.
 
 Run locally instead:
 ```bash
