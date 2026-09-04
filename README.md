@@ -1,15 +1,84 @@
-# midnight-run
+# HushPot
+> Private group savings pots on Midnight — pledge amounts stay secret; the pot only proves you've met the minimum.
 
-Ubong's entry lane for Rise In "New Moon to Full" + opportunistic Midnight Wave 1.
+## Contract Address
+| Network | Address |
+|----------|----------------------------------|
+| Preview  | [PASTE ADDRESS AFTER DEPLOY] |
+| Preprod  | [PASTE ADDRESS AFTER DEPLOY] |
 
-Goal: burn down L1->L2 stack risk (Compact toolchain, contract deploy, Lace wallet
-frontend) and prep L3 velocity. All work local for now; git identity switches to
-`ubongn` on push (already set in local config).
+## What This Does
+HushPot is a group savings pot in the esusu / ajo tradition: a host opens a pot with a fixed capacity (number of seats) and a minimum pledge, members join and put money in while entries are open, the host closes entries, and valid members claim from the pot afterwards.
 
-Layout:
-- `docs-cache/`   - mirrors of docs.midnight.network pages used as ground truth
-- `RUNBOOK.md`    - deliverable memo (toolchain steps, faucet, winner shape, ideas)
-- `contract/`     - Compact contract + deploy scripts (toolchain runs under WSL2)
-- `frontend/`     - Vite + TS Lace-connected dApp (runs natively on Windows)
+What makes it a Midnight dApp is the disclosure boundary. The pot itself lives on-chain and everyone can see the pot-level facts — whether entries are open or closed, how many seats are taken, whether a member's claim is valid. But each member's pledge **amount** is never published: it exists only in the member's wallet as a private witness and crosses the chain solely as a salted commitment. A member can prove "my pledge is at least the threshold" without ever revealing the number.
 
-Status: see RUNBOOK.md "Where we are".
+## Privacy Model
+- **PUBLIC (on-chain):** pot open/closed state, capacity, minPledge threshold value, membership set (member commitments — addresses are never stored, only anchors), claim validity, and pot-level counters/totals (member count, claim count, claimed total at settlement).
+- **PRIVATE (witness, never on-chain):** `localPledgeAmount` (each member's actual pledge amount) and `localSk` (member secret key). Both live only in the member's wallet; the chain sees salted hashes at most.
+- **PROVES without revealing:** `provePledgeAtLeast` — a member proves their committed pledge ≥ a threshold without disclosing the amount (or the threshold). The circuit writes nothing to the ledger; a successful proof *is* the statement.
+
+## Tech Stack
+- Midnight network (Preview / Preprod)
+- Compact smart-contract language, `compactc` 0.31.1
+- TypeScript + midnight-js 4.1.1 (contract bindings, wallet, deploy driver)
+- Node.js 22, Vitest
+- Docker — Midnight proof server (and optional local devnet)
+
+## Prerequisites
+- Node.js ≥ 22
+- Docker (proof server; optional local devnet)
+- Lace wallet — optional at L1 (contract + CLI lifecycle only)
+- On Windows: WSL2 with an Ubuntu distro — `compactc` has no native Windows build; `npm run compile` drives it through WSL automatically
+
+## Setup
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Compile the contract (contracts/hushpot.compact -> managed/hushpot)
+npm run compile
+
+# 3. Run a local proof server on port 6300 (required for testnet transactions)
+docker run -d -p 6300:6300 midnightntwrk/proof-server:latest
+# repo helper alternative (ledger 8.1.0 proof-server under WSL):
+#   wsl -d mnc -u root -- bash tools/run-proof-server.sh
+
+# 4. Configure the deployer seed (gitignored — never commit funded seeds)
+cd deploy
+cp .env.preprod.example .env.preprod
+#    then set MIDNIGHT_PREPROD_SEED to a real 64-hex-char seed
+
+# 5. Fund and deploy to Preprod
+npm run hushpot:address   # prints the unshielded address -> fund via the Preprod faucet
+npm run hushpot:deploy    # syncs the wallet, waits for funds, deploys HushPot
+```
+
+Optional:
+- `npm run hushpot:lifecycle [address]` — drive the full group-pot story on-chain (join → pledge → prove → close → claim)
+- `npm run hushpot:demo` — deploy + lifecycle in one run
+- `MIDNIGHT_NETWORK=local|preview|preprod` selects the target (default `preprod`)
+- `docker compose up --wait` in `contract/` boots a local devnet (node + indexer)
+
+## Run Tests
+```bash
+npm test
+```
+51 tests, all green: circuit logic and state transitions (19), privacy surface — private inputs are never exposed on-chain (10), and wallet-state persistence across restarts (22).
+
+## Initial Idea
+[UBONG WILL FILL IN]
+
+## Screenshots
+Circuits compiling (`npm run compile`):
+
+![Compile circuits](screenshots/01-compile-circuits.png)
+
+Preprod faucet funding the deployer wallet with 1000 tNIGHT:
+
+![Preprod faucet](screenshots/04-preprod-faucet-1000tnight.png)
+
+Test suite passing:
+
+![Tests passing](screenshots/05-tests-29-passing.png)
+
+Deployed contract address on Preprod: *coming after Preprod deploy*.
