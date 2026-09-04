@@ -66,7 +66,7 @@ npm test
 51 tests, all green: circuit logic and state transitions (19), privacy surface — private inputs are never exposed on-chain (10), and wallet-state persistence across restarts (22).
 
 ## Initial Idea
-[UBONG WILL FILL IN]
+HushPot brings esusu — the West African group savings tradition — onto Midnight, minus the part where everyone can see everyone's money. Each member's pledge amount is a private witness: the pot proves you've met the minimum without ever revealing what you actually put in, and claims settle without exposing who held how much. Only what must be verifiable stays public — the pot is funded, the round closed, the claim valid. For every community where savings participation is sensitive information.
 
 ## Screenshots
 Circuits compiling (`npm run compile`):
