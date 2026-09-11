@@ -6,6 +6,8 @@ import type { MidnightConnection, WalletError } from '../hooks/useMidnight';
 
 const LACE_STORE_URL =
   'https://chromewebstore.google.com/detail/lace/gafhhkghbfjjkeiendhlofajokpaflmk';
+const ONEAM_STORE_URL =
+  'https://chromewebstore.google.com/detail/1am/bphnkdkcnfhompoegfpgnkidcjfbojjp';
 
 /** Short bech32m address for display: mid1abcd…wxyz */
 function shortAddress(addr: string): string {
@@ -29,6 +31,10 @@ function ErrorNote({ error, onRetry }: { error: WalletError; onRetry: () => void
         <div style={{ marginTop: 8 }}>
           <a href={LACE_STORE_URL} target="_blank" rel="noreferrer">
             Install Lace →
+          </a>
+          {' · '}
+          <a href={ONEAM_STORE_URL} target="_blank" rel="noreferrer">
+            Install 1AM →
           </a>
         </div>
       </div>
@@ -126,7 +132,7 @@ export default function WalletConnect({ conn }: { conn: MidnightConnection }) {
     return (
       <div className="panel" data-testid="wallet-connecting">
         <h2>
-          <span className="spinner" /> Waiting for Lace…
+          <span className="spinner" /> Waiting for wallet…
         </h2>
         <p className="sub">Approve the connection request in the wallet window.</p>
       </div>
@@ -137,11 +143,11 @@ export default function WalletConnect({ conn }: { conn: MidnightConnection }) {
     <div className="panel" data-testid="wallet-idle">
       <h2>Connect your wallet</h2>
       <p className="sub">
-        HushPot runs on Midnight <b>Preprod</b> and proves your pledge locally in Lace — the
+        HushPot runs on Midnight <b>Preprod</b> and proves your pledge locally — the
         amount never leaves your wallet in the clear.
       </p>
       <button className="btn primary" onClick={() => void conn.connect()}>
-        Connect Lace
+        Connect Wallet
       </button>
       {error && <ErrorNote error={error} onRetry={() => void conn.connect()} />}
     </div>

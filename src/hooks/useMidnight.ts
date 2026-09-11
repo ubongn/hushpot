@@ -25,13 +25,15 @@ export type ConnectionStatus = 'idle' | 'connecting' | 'connected';
 
 const POLL_MS = 10_000;
 
-/** Find the Lace InitialAPI among injected wallets (key 'lace' or rdns match). */
-function findLace(): InitialAPI | null {
+/** Find any injected Midnight wallet (Lace, 1AM, or any dapp-connector wallet). */
+function findWallet(): InitialAPI | null {
   const wallets = window.midnight;
   if (!wallets) return null;
-  const byKey = wallets['lace'];
-  if (byKey) return byKey;
-  const entry = Object.values(wallets).find((w) => w?.rdns?.toLowerCase().includes('lace'));
+  // Prefer Lace for backwards compatibility, then 1AM, then first available.
+  const preferred = wallets['lace'] ?? wallets['1am'] ?? wallets['1AM'];
+  if (preferred) return preferred;
+  // Fallback: any wallet implementing the dapp-connector API (has a connect method).
+  const entry = Object.values(wallets).find((w) => typeof w?.connect === 'function');
   return entry ?? null;
 }
 
@@ -112,11 +114,11 @@ export function useMidnight(): MidnightConnection {
     if (apiRef.current) return;
     setError(null);
 
-    const lace = findLace();
+    const lace = findWallet();
     if (!lace) {
       setError({
         kind: 'not-installed',
-        message: 'No Midnight wallet found. Install the Lace browser extension to continue.',
+        message: 'No Midnight wallet found. Install Lace or 1AM to continue.',
       });
       return;
     }
