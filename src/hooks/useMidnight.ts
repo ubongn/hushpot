@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ConnectedAPI, InitialAPI } from '@midnight-ntwrk/dapp-connector-api';
 import { buildHushpotProviders, type HushpotProviders } from '../midnight/providers';
 import { TARGET_NETWORK_ID } from '../midnight/hushpot';
+import { setNetworkId as setSdkNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 
 export type WalletErrorKind =
   | 'not-installed' // no Lace (or any Midnight wallet) in window.midnight
@@ -142,6 +143,9 @@ export function useMidnight(): MidnightConnection {
 
       const [{ unshieldedAddress: unshielded }, { shieldedAddress: shielded }] =
         await Promise.all([connected.getUnshieldedAddress(), connected.getShieldedAddresses()]);
+
+      // Midnight.js SDK requires a global network ID before any contract ops.
+      setSdkNetworkId(config.networkId);
 
       const built = await buildHushpotProviders(connected);
 
