@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import wasm from 'vite-plugin-wasm';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 // Web app build (React + Vite). The node-side test suite / deploy driver is
 // untouched — vitest uses its own config (vitest.config.ts).
@@ -13,7 +14,15 @@ import wasm from 'vite-plugin-wasm';
 // natively (Chrome/Edge 89+, Firefox 89+, Safari 15+).
 export default defineConfig({
   base: './',
-  plugins: [react(), wasm()],
+  plugins: [
+    react(),
+    wasm(),
+    nodePolyfills({
+      // Only polyfill what Midnight.js actually needs in the browser;
+      // avoid polluting the global with Node builtins we don't use.
+      include: ['buffer', 'process', 'stream', 'util', 'events'],
+    }),
+  ],
   build: {
     target: 'esnext',
     // ledger-v8 wasm + midnight-js deps are large; don't warn about it.
