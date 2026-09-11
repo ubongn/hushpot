@@ -47,6 +47,7 @@ const toHex = (bytes: Uint8Array): string =>
   Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 
 const fromHex = (hex: string): Uint8Array => {
+  if (hex.startsWith('midnight:')) hex = hex.slice(9);
   if (hex.startsWith('0x')) hex = hex.slice(2);
   const out = new Uint8Array(hex.length / 2);
   for (let i = 0; i < out.length; i++) {
@@ -54,6 +55,9 @@ const fromHex = (hex: string): Uint8Array => {
   }
   return out;
 };
+
+/** Midnight's dapp-connector expects 'midnight:' tagged hex strings. */
+const tagHex = (bytes: Uint8Array): string => 'midnight:' + toHex(bytes);
 
 /** Adapter: midnight-js WalletProvider -> dapp-connector ConnectedAPI. */
 class ConnectorWalletProvider implements WalletProvider {
@@ -74,7 +78,7 @@ class ConnectorWalletProvider implements WalletProvider {
   async balanceTx(tx: UnboundTransaction): Promise<FinalizedTransaction> {
     // UnboundTransaction = proofs + preimage binding, no signatures -> the
     // connector calls this an "unsealed" transaction.
-    const { tx: balanced } = await this.api.balanceUnsealedTransaction(toHex(tx.serialize()), {
+    const { tx: balanced } = await this.api.balanceUnsealedTransaction(tagHex(tx.serialize()), {
       payFees: true,
     });
     // deserialize needs the phantom type markers ('signature' | 'proof' | 'binding').
@@ -111,7 +115,7 @@ class ConnectorMidnightProvider implements MidnightProvider {
   constructor(private readonly api: ConnectedAPI) {}
 
   async submitTx(tx: FinalizedTransaction): Promise<string> {
-    await this.api.submitTransaction(toHex(tx.serialize()));
+    await this.api.submitTransaction(tagHex(tx.serialize()));
     return tx.transactionHash();
   }
 }
