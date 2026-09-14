@@ -39,6 +39,8 @@ import {
   Transaction,
 } from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import type { ContractAddress, SigningKey } from '@midnight-ntwrk/midnight-js-protocol/compact-runtime';
+import { provingProvider as zkirProvingProvider } from '@midnight-ntwrk/zkir-v2';
+import type { KeyMaterialProvider, ProvingKeyMaterial } from '@midnight-ntwrk/zkir-v2';
 
 import { HushpotZkConfigProvider } from './zkAssets';
 import { TARGET_NETWORK_ID, type HushpotPrivateState } from './hushpot';
@@ -199,6 +201,31 @@ export class InMemoryPrivateStateProvider
   }
 }
 
+/**
+ * Adapts HushpotZkConfigProvider to the zkir-v2 KeyMaterialProvider interface,
+ * enabling fully in-browser proving via the zkir WASM — no wallet prover needed.
+ */
+function asZkirKeyMaterialProvider(zkConfig: HushpotZkConfigProvider): KeyMaterialProvider {
+  return {
+    async lookupKey(keyLocation: string): Promise<ProvingKeyMaterial | undefined> {
+      try {
+        const [proverKey, verifierKey, ir] = await Promise.all([
+          zkConfig.getProverKey(keyLocation),
+          zkConfig.getVerifierKey(keyLocation),
+          zkConfig.getZKIR(keyLocation),
+        ]);
+        return { proverKey, verifierKey, ir };
+      } catch {
+        return undefined;
+      }
+    },
+    async getParams(_k: number): Promise<Uint8Array> {
+      // HushPot circuits use pre-generated parameters embedded in the zkir.
+      return new Uint8Array(0);
+    },
+  };
+}
+
 export interface HushpotProviders {
   privateStateProvider: InMemoryPrivateStateProvider;
   publicDataProvider: PublicDataProvider;
@@ -218,8 +245,12 @@ export async function buildHushpotProviders(api: ConnectedAPI): Promise<HushpotP
   const zkConfigProvider = new HushpotZkConfigProvider();
   const privateStateProvider = new InMemoryPrivateStateProvider();
 
-  // Lace proves with its own prover using our key material.
-  const provingProvider = await api.getProvingProvider(zkConfigProvider.asKeyMaterialProvider());
+  // Use the zkir WASM prover (runs entirely in-browser) instead of the
+  // wallet's prover. This avoids 1AM's "tagged data does not begin with
+  // 'midnight:'" bug where the wallet's ProvingProvider.check() passes
+  // raw bytes to the WASM without the required midnight: prefix.
+  const kmProvider = asZkirKeyMaterialProvider(zkConfigProvider);
+  const provingProvider = zkirProvingProvider(kmProvider);
   const proofProvider = createProofProvider(provingProvider);
 
   const walletProvider = new ConnectorWalletProvider(api);
