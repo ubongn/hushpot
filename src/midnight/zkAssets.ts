@@ -95,3 +95,13 @@ export async function preloadCircuit(circuit: CircuitName): Promise<void> {
   const a = ASSETS[circuit];
   await Promise.all([fetchAsset(a.zkir), fetchAsset(a.verifier), fetchAsset(a.prover)]);
 }
+
+/**
+ * Fetch a circuit's .zkir file as raw JSON text (for zkir-v2's
+ * jsonIrToBinary conversion). Returns cached bytes decoded as UTF-8.
+ */
+export async function fetchZkirJson(circuitId: string): Promise<string> {
+  const c = circuitName(circuitId);
+  const bytes = await fetchAsset(ASSETS[c].zkir);
+  return new TextDecoder().decode(bytes);
+}

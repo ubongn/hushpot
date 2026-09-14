@@ -39,10 +39,10 @@ import {
   Transaction,
 } from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import type { ContractAddress, SigningKey } from '@midnight-ntwrk/midnight-js-protocol/compact-runtime';
-import { provingProvider as zkirProvingProvider } from '@midnight-ntwrk/zkir-v2';
+import { provingProvider as zkirProvingProvider, jsonIrToBinary } from '@midnight-ntwrk/zkir-v2';
 import type { KeyMaterialProvider, ProvingKeyMaterial } from '@midnight-ntwrk/zkir-v2';
 
-import { HushpotZkConfigProvider } from './zkAssets';
+import { HushpotZkConfigProvider, fetchZkirJson } from './zkAssets';
 import { TARGET_NETWORK_ID, type HushpotPrivateState } from './hushpot';
 
 const toHex = (bytes: Uint8Array): string =>
@@ -209,11 +209,14 @@ function asZkirKeyMaterialProvider(zkConfig: HushpotZkConfigProvider): KeyMateri
   return {
     async lookupKey(keyLocation: string): Promise<ProvingKeyMaterial | undefined> {
       try {
-        const [proverKey, verifierKey, ir] = await Promise.all([
+        const [proverKey, verifierKey, irJson] = await Promise.all([
           zkConfig.getProverKey(keyLocation),
           zkConfig.getVerifierKey(keyLocation),
-          zkConfig.getZKIR(keyLocation),
+          fetchZkirJson(keyLocation),
         ]);
+        // .zkir files are JSON; the zkir-v2 WASM expects binary IR prefixed
+        // with 'midnight:ir-source[v2]:' — jsonIrToBinary does the conversion.
+        const ir = jsonIrToBinary(irJson);
         return { proverKey, verifierKey, ir };
       } catch {
         return undefined;
