@@ -14,11 +14,12 @@ function shortAddress(addr: string): string {
   return addr.length > 22 ? `${addr.slice(0, 10)}…${addr.slice(-6)}` : addr;
 }
 
-/** NIGHT has 9 decimals; balances arrive as raw bigints keyed by token type. */
+/** NIGHT has 6 decimals (Cardano convention — Midnight is a Cardano sidechain);
+ * balances arrive as raw bigints keyed by token type. */
 function formatBalance(tokenType: string, raw: bigint): string {
   const isNative = /^0x?0*$/.test(tokenType);
   const label = isNative ? 'NIGHT' : `${tokenType.slice(0, 8)}…`;
-  const units = Number(raw) / 1e9;
+  const units = Number(raw) / 1e6;
   const shown = units >= 1000 ? units.toFixed(0) : units.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
   return `${shown} ${label}`;
 }
