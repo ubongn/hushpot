@@ -3,7 +3,7 @@
 // generated in this tab, held in the in-memory private state provider, and
 // only ever cross the circuit boundary as commitments/proofs.
 
-import { submitCallTx } from '@midnight-ntwrk/midnight-js-contracts';
+import { submitCallTxAsync } from '@midnight-ntwrk/midnight-js-contracts';
 import type { Contract } from '../../managed/hushpot/contract/index.js';
 import { HUSHPOT_ADDRESS, type CircuitId } from './hushpot';
 import {
@@ -41,7 +41,13 @@ async function callCircuit(
 ): Promise<CircuitCallResult> {
   // Same variance cast as deploy/src/hushpot-main.ts: the zk config provider is
   // keyed by circuit-id strings, midnight-js wants the contract-typed union.
-  const result = await submitCallTx<Contract<HushpotPrivateState>, CircuitId>(
+  //
+  // submitCallTxAsync returns right after the wallet accepts the transaction —
+  // we deliberately do NOT wait for on-chain finalization: the indexer WS
+  // watcher reliably drops during the 60-90s in-browser ZK proof and would
+  // hang the UI forever even though the tx lands and confirms. The pot panel
+  // polls the indexer directly and shows the state change.
+  const result = await submitCallTxAsync<Contract<HushpotPrivateState>, CircuitId>(
     providers as never,
     {
       compiledContract: CompiledHushpotContract as never,
