@@ -81,21 +81,35 @@ class ConnectorWalletProvider implements WalletProvider {
     // UnboundTransaction = proofs + preimage binding, no signatures -> the
     // connector calls this an "unsealed" transaction.
     console.log('[HushPot] balanceTx: sending to wallet, tx bytes =', tx.serialize().length);
-    try {
+    const attempt = async (): Promise<FinalizedTransaction> => {
       const { tx: balanced } = await this.api.balanceUnsealedTransaction(tagHex(tx.serialize()), {
         payFees: true,
       });
       console.log('[HushPot] balanceTx: wallet returned', typeof balanced, 'len =', balanced?.length ?? 0);
-      // deserialize needs the phantom type markers ('signature' | 'proof' | 'binding').
       return Transaction.deserialize<SignatureEnabled, Proof, Binding>(
         'signature' as SignatureEnabled['instance'],
         'proof' as Proof['instance'],
         'binding' as Binding['instance'],
         fromHex(balanced),
       ) as FinalizedTransaction;
-    } catch (e) {
-      console.error('[HushPot] balanceTx FAILED:', e);
-      throw e;
+    };
+    try {
+      return await attempt();
+    } catch (first) {
+      // Chrome MV3 service workers die after ~30s idle; a long in-browser ZK
+      // proof (60-90s) outlives them. The first call after the gap fails
+      // ("Error forwarding message" / "Request failed") but wakes the worker —
+      // wait briefly and retry once.
+      console.warn('[HushPot] balanceTx first attempt failed (wallet worker wake-up?), retrying in 3s…', first);
+      await new Promise((r) => setTimeout(r, 3000));
+      try {
+        const result = await attempt();
+        console.log('[HushPot] balanceTx: retry SUCCEEDED');
+        return result;
+      } catch (e) {
+        console.error('[HushPot] balanceTx FAILED after retry:', e);
+        throw e;
+      }
     }
   }
 
@@ -282,14 +296,24 @@ export async function buildHushpotProviders(api: ConnectedAPI): Promise<HushpotP
   const kmProvider = asZkirKeyMaterialProvider(zkConfigProvider);
   const provingProvider = zkirProvingProvider(kmProvider);
   const baseProver = createProofProvider(provingProvider);
-  // Wrap with timing logs so we can see where the pipeline stalls.
+  // Wrap with timing logs + wallet keep-alive: Chrome MV3 service workers die
+  // after ~30s idle, but in-browser ZK proofs run 60-90s. Ping a cheap wallet
+  // call every 20s while proving so the wallet worker survives to balance the
+  // proven transaction.
   const proofProvider = {
     async proveTx(unprovenTx: never) {
       console.log('[HushPot] proveTx: starting ZK proof in-browser…');
+      const keepAlive = setInterval(() => {
+        api.getConfiguration().catch(() => {});
+      }, 20_000);
       const t0 = performance.now();
-      const result = await baseProver.proveTx(unprovenTx);
-      console.log(`[HushPot] proveTx: DONE in ${((performance.now() - t0) / 1000).toFixed(1)}s`);
-      return result;
+      try {
+        const result = await baseProver.proveTx(unprovenTx);
+        console.log(`[HushPot] proveTx: DONE in ${((performance.now() - t0) / 1000).toFixed(1)}s`);
+        return result;
+      } finally {
+        clearInterval(keepAlive);
+      }
     },
   };
 
