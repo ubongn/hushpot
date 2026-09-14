@@ -205,6 +205,11 @@ export class InMemoryPrivateStateProvider
  * Adapts HushpotZkConfigProvider to the zkir-v2 KeyMaterialProvider interface,
  * enabling fully in-browser proving via the zkir WASM — no wallet prover needed.
  */
+const BLS_PARAMS_S3 =
+  'https://midnight-s3-fileshare-dev-eu-west-1.s3.eu-west-1.amazonaws.com';
+
+const paramsCache = new Map<number, Uint8Array>();
+
 function asZkirKeyMaterialProvider(zkConfig: HushpotZkConfigProvider): KeyMaterialProvider {
   return {
     async lookupKey(keyLocation: string): Promise<ProvingKeyMaterial | undefined> {
@@ -222,9 +227,18 @@ function asZkirKeyMaterialProvider(zkConfig: HushpotZkConfigProvider): KeyMateri
         return undefined;
       }
     },
-    async getParams(_k: number): Promise<Uint8Array> {
-      // HushPot circuits use pre-generated parameters embedded in the zkir.
-      return new Uint8Array(0);
+    async getParams(k: number): Promise<Uint8Array> {
+      // BLS proving parameters for the circuit's security level k, fetched
+      // from Midnight's public S3 fileshare (same source as the wallet SDK).
+      const cached = paramsCache.get(k);
+      if (cached) return cached;
+      const res = await fetch(`${BLS_PARAMS_S3}/bls_midnight_2p${k}`);
+      if (!res.ok) {
+        throw new Error(`Failed to load BLS params for k=${k}: HTTP ${res.status}`);
+      }
+      const params = new Uint8Array(await res.arrayBuffer());
+      paramsCache.set(k, params);
+      return params;
     },
   };
 }
