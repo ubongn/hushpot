@@ -80,16 +80,23 @@ class ConnectorWalletProvider implements WalletProvider {
   async balanceTx(tx: UnboundTransaction): Promise<FinalizedTransaction> {
     // UnboundTransaction = proofs + preimage binding, no signatures -> the
     // connector calls this an "unsealed" transaction.
-    const { tx: balanced } = await this.api.balanceUnsealedTransaction(tagHex(tx.serialize()), {
-      payFees: true,
-    });
-    // deserialize needs the phantom type markers ('signature' | 'proof' | 'binding').
-    return Transaction.deserialize<SignatureEnabled, Proof, Binding>(
-      'signature' as SignatureEnabled['instance'],
-      'proof' as Proof['instance'],
-      'binding' as Binding['instance'],
-      fromHex(balanced),
-    ) as FinalizedTransaction;
+    console.log('[HushPot] balanceTx: sending to wallet, tx bytes =', tx.serialize().length);
+    try {
+      const { tx: balanced } = await this.api.balanceUnsealedTransaction(tagHex(tx.serialize()), {
+        payFees: true,
+      });
+      console.log('[HushPot] balanceTx: wallet returned', typeof balanced, 'len =', balanced?.length ?? 0);
+      // deserialize needs the phantom type markers ('signature' | 'proof' | 'binding').
+      return Transaction.deserialize<SignatureEnabled, Proof, Binding>(
+        'signature' as SignatureEnabled['instance'],
+        'proof' as Proof['instance'],
+        'binding' as Binding['instance'],
+        fromHex(balanced),
+      ) as FinalizedTransaction;
+    } catch (e) {
+      console.error('[HushPot] balanceTx FAILED:', e);
+      throw e;
+    }
   }
 
   getCoinPublicKey(): string {
@@ -117,8 +124,16 @@ class ConnectorMidnightProvider implements MidnightProvider {
   constructor(private readonly api: ConnectedAPI) {}
 
   async submitTx(tx: FinalizedTransaction): Promise<string> {
-    await this.api.submitTransaction(tagHex(tx.serialize()));
-    return tx.transactionHash();
+    console.log('[HushPot] submitTx: sending to wallet');
+    try {
+      await this.api.submitTransaction(tagHex(tx.serialize()));
+      const hash = tx.transactionHash();
+      console.log('[HushPot] submitTx: OK, hash =', hash);
+      return hash;
+    } catch (e) {
+      console.error('[HushPot] submitTx FAILED:', e);
+      throw e;
+    }
   }
 }
 
@@ -266,7 +281,17 @@ export async function buildHushpotProviders(api: ConnectedAPI): Promise<HushpotP
   // raw bytes to the WASM without the required midnight: prefix.
   const kmProvider = asZkirKeyMaterialProvider(zkConfigProvider);
   const provingProvider = zkirProvingProvider(kmProvider);
-  const proofProvider = createProofProvider(provingProvider);
+  const baseProver = createProofProvider(provingProvider);
+  // Wrap with timing logs so we can see where the pipeline stalls.
+  const proofProvider = {
+    async proveTx(unprovenTx: never) {
+      console.log('[HushPot] proveTx: starting ZK proof in-browser…');
+      const t0 = performance.now();
+      const result = await baseProver.proveTx(unprovenTx);
+      console.log(`[HushPot] proveTx: DONE in ${((performance.now() - t0) / 1000).toFixed(1)}s`);
+      return result;
+    },
+  };
 
   const walletProvider = new ConnectorWalletProvider(api);
   await walletProvider.ready();
