@@ -58,8 +58,11 @@ const fromHex = (hex: string): Uint8Array => {
   return out;
 };
 
-/** Midnight's dapp-connector expects 'midnight:' tagged hex strings. */
-const tagHex = (bytes: Uint8Array): string => 'midnight:' + toHex(bytes);
+/** Midnight's dapp-connector expects plain hex of the tagged binary —
+ * Transaction.serialize() already embeds the 'midnight:transaction[v9]…'
+ * header in the bytes (same tagged format as the .prover key files).
+ * No extra prefix: double-tagging breaks wallet deserialization. */
+const toWire = (bytes: Uint8Array): string => toHex(bytes);
 
 /** Adapter: midnight-js WalletProvider -> dapp-connector ConnectedAPI. */
 class ConnectorWalletProvider implements WalletProvider {
@@ -82,7 +85,7 @@ class ConnectorWalletProvider implements WalletProvider {
     // connector calls this an "unsealed" transaction.
     console.log('[HushPot] balanceTx: sending to wallet, tx bytes =', tx.serialize().length);
     const attempt = async (): Promise<FinalizedTransaction> => {
-      const { tx: balanced } = await this.api.balanceUnsealedTransaction(tagHex(tx.serialize()), {
+      const { tx: balanced } = await this.api.balanceUnsealedTransaction(toWire(tx.serialize()), {
         payFees: true,
       });
       console.log('[HushPot] balanceTx: wallet returned', typeof balanced, 'len =', balanced?.length ?? 0);
@@ -140,7 +143,7 @@ class ConnectorMidnightProvider implements MidnightProvider {
   async submitTx(tx: FinalizedTransaction): Promise<string> {
     console.log('[HushPot] submitTx: sending to wallet');
     try {
-      await this.api.submitTransaction(tagHex(tx.serialize()));
+      await this.api.submitTransaction(toWire(tx.serialize()));
       const hash = tx.transactionHash();
       console.log('[HushPot] submitTx: OK, hash =', hash);
       return hash;
