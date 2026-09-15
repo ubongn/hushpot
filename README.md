@@ -1,4 +1,7 @@
 # HushPot
+
+[![CI](https://github.com/ubongn/hushpot/actions/workflows/ci.yml/badge.svg)](https://github.com/ubongn/hushpot/actions/workflows/ci.yml)
+
 > Private group savings pots on Midnight — pledge amounts stay secret; the pot only proves you've met the minimum.
 
 ## Contract Address
