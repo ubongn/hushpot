@@ -57,7 +57,7 @@ async function callCircuit(
       args: args as never,
     },
   );
-  return { txId: result.public.txId };
+  return { txId: result.txId };
 }
 
 /** Join the pot with a hidden pledge amount (NIGHT, whole units). */
